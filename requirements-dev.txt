@@ -1,0 +1,4 @@
+# Requirements for development, hand-written.
+# No pip freeze here, just the tools you need.
+ipykernel 
+jupyter
