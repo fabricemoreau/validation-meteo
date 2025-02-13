@@ -1,0 +1,8 @@
+# Requirements for application, hand-written.
+# No pip freeze here, just the tools you need.
+pandas
+numpy
+#matplotlib
+#seaborn
+#scipy
+#scikit-learn
