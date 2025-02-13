@@ -27,6 +27,8 @@ This repo is a Starting Pack for DS projects. You can rearrange the structure to
     │
     ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
     │                         generated with `pip freeze > requirements.txt`
+    ├── requirements-dev.txt <- hand-written file list of libraries used for developpements
+    ├── requirements-scripts.txt <-hand-written fil list of libraries used in the script
     │
     ├── src                <- Source code for use in this project.
     │   ├── __init__.py    <- Makes src a Python module
