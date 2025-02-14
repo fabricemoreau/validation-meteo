@@ -2,7 +2,8 @@
 # No pip freeze here, just the tools you need.
 pandas
 numpy
-#matplotlib
-#seaborn
+matplotlib
+seaborn
+duckdb # pour découper jeux de données
 #scipy
 #scikit-learn
