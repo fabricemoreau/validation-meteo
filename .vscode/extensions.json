@@ -3,6 +3,7 @@
         "ms-python.python",
         "matangover.mypy",
         "ms-python.pylint",
-        "ms-toolsai.jupyter"
+        "ms-toolsai.jupyter",
+        "bierner.markdown-mermaid"
     ]
 }
