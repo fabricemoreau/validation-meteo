@@ -3,13 +3,13 @@ from sklearn.metrics.pairwise import euclidean_distances
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
-stations = pd.read_csv('./data/raw/stationsmeteo.csv', sep = ';')
-#donnees = pd.read_csv('./data/raw/donneesmeteo_2011-2015_completes_v2.csv', sep=';')
-donnees = pd.read_csv('/workspaces/meteo/data/raw/donneesmeteo_2010-2024_500stations.csv', sep = ';')
+periode = '2010-2012'
+fichier = './data/raw/stationsmeteo_' + periode + '.csv'
+stations = pd.read_csv('./data/raw/stationsmeteo_2010-2024.csv', sep = ';')
+stations = pd.read_csv(fichier, sep = ';')
 
 # si on veut se restreindre aux stations de l'échantillon
-stations = stations[stations.Station.isin(donnees.codearvalis.unique())]
+#stations = stations[stations.Station.isin(donnees.codearvalis.unique())]
 # stations sont un code à 4 chiffres, les 2 premiers chiffres correspondent au département (9151 = 91)
 stations['Departement'] = stations.Station // 100
 
@@ -26,9 +26,10 @@ axes[0].ylabel("Altitude (m)")
 axes[0].xlabel("Stations")
 
 sns.histplot(x = "Altitude", data = stations, ax = axes[1])
-axes[1].title("distribution des altitudes des stations")
+axes[1].title("distribution des altitudes des stations, période " + periode)
 axes[1].ylabel("effectif")
 axes[1].xlabel("Altitude (m)")
+plt.savefig('./reports/figures/altitudes_' + periode + '.png')
 plt.show();
 # Les stations les plus hautes sont rares
 
@@ -45,9 +46,11 @@ stations_proches.columns = ['stationproche1', 'stationproche2', 'stationproche3'
 print(distances.describe())
 plt.figure(figsize=(10, 10))
 sns.boxplot( data = distances)
-plt.title("Distances des stations les plus proches")
+plt.title("Distances des stations les plus proches, periode " + periode)
 plt.ylabel("Distance (km)")
 plt.xticks([0, 1, 2, 3, 4],labels = ["stationproche1", "stationproche2", "stationproche3", "stationproche4", "stationproche5"], rotation = 45)
+plt.tit
+plt.savefig('./reports/figures/distances_moyennes' + periode + '.png')
 plt.show();
 
 # format plus facile à exploiter pour les graphiques
@@ -55,10 +58,11 @@ distances_graph = distances.melt(var_name='rang', value_name='distance')
 
 plt.figure(figsize=(10, 10))
 sns.boxplot(x = "rang", y = "distance", data = distances_graph)
-plt.title("Distance aux 5 stations les plus proches")
+plt.title("Distance aux 5 stations les plus proches, periode " + periode)
 plt.ylabel("Distance (km)")
 plt.xlabel("Rang de la station")
-plt.show()
+plt.savefig('./reports/figures/distances_rang_' + periode + '.png')
+plt.show();
 
 
 # les stations en altitude sont elles plus éloignées des autres ? 
@@ -85,11 +89,12 @@ distance_altitude_df['departement'] = distance_altitude_df.Station1 // 100
 # différence d'altitude en fonction de la distance          
 plt.figure(figsize=(10, 10))
 sns.scatterplot(x='Distance', y='Difference_Altitude', data=distance_altitude_df, )
-sns.lineplot(x= [0, 30], y = [150, 150], color='red', label = "seuil tolérance")
-plt.title("Différence d'altitude en fonction de la distance")
+sns.lineplot(x= [0, 50], y = [150, 150], color='red', label = "seuil tolérance")
+plt.title("Différence d'altitude en fonction de la distance, période " + periode)
 plt.xlabel("Distance (km)")
 plt.ylabel("Différence d'altitude (m)")
-plt.xlim(0, 30)
+plt.xlim(0, 50)
+plt.savefig('./reports/figures/distance_altitude_' + periode + '.png')
 plt.show();
 print(distance_altitude_df.corr()) # pas de corrélation entre distance et altitude
 
