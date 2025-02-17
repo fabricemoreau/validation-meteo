@@ -17,8 +17,8 @@ stations_echantillon360.to_csv('./data/raw/stationsmeteo_363.csv', sep=';')
 query = """
     SELECT * 
     FROM './data/raw/donneesmeteo_2010-2024_completes.csv'
-    WHERE libellecourt IN ['TN', 'TX', 'TM', 'RR', 'GLOT', 'ETP'] AND
-          codearvalis IN ("""
+    WHERE libellecourt IN ['TN', 'TX', 'TM', 'RR', 'GLOT', 'ETP'] 
+          AND codearvalis IN ("""
 query += ','.join(map(str, stations_echantillon360.Station.unique().tolist())) + ")"
 donnees_363 = duckdb.sql(query)
 donnees_363.to_csv('./data/raw/donneesmeteo_2010-2024_363stations.csv', sep=';', timestamp_format='%Y-%m-%d')
