@@ -31,7 +31,7 @@ for annee_deb in range(2010, 2025, duree):
     SELECT * 
 FROM './data/raw/donneesmeteo_2010-2024_completes.csv'
 WHERE EXTRACT('YEAR' FROM datemesure) IN ("""
-    query += ','.join(map(str, list(range(annee_deb, annee_deb + duree - 1, 1))))
+    query += ','.join(map(str, list(range(annee_deb, annee_deb + duree, 1))))
     query +=""") 
     AND libellecourt IN ['TN', 'TX', 'TM', 'RR', 'GLOT', 'ETP']
 """
