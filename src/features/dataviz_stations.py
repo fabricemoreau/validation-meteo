@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.metrics.pairwise import euclidean_distances
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy.stats import pearsonr
 
 periode = '2010-2012'
 fichier = './data/raw/stationsmeteo_' + periode + '.csv'
@@ -97,6 +98,8 @@ plt.xlim(0, 50)
 plt.savefig('./reports/figures/distance_altitude_' + periode + '.png')
 plt.show();
 print(distance_altitude_df.corr()) # pas de corrélation entre distance et altitude
+
+pearsonr(distance_altitude_df.Distance, distance_altitude_df.Difference_Altitude) # corrélation
 
 
 fig = plt.figure(figsize=(20, 20))
