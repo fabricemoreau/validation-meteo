@@ -42,38 +42,60 @@ meteodf['correction'] = np.abs(meteodf.valeur - meteodf.valeurorigine) > 0
 meteodf['correction'] = np.where(meteodf['correction'], 1, 0)
 meteodf['correction'] = meteodf['correction'].fillna(0)
 
-print('plus de duplication : ',  meteodf.duplicated(['codearvalis', 'datemesure', 'libellecourt']).sum())
 
-# on pivote pour avoir une ligne par date
-meteobydate = meteodf.pivot(index = ['codearvalis', 'datemesure'], columns = 'libellecourt')
-meteobydate.to_csv('./data/processed/meteo_2010-2012.csv', sep=';')
-meteobydate = pd.read_csv('./data/processed/meteo_2010-2012.csv', sep=';', header = [0,1, 2])
-meteobydate.reset_index(inplace = True)
-# pas de données manquantes
-meteobydate.valeur.TN.isna().sum()
 ##################################### étude paramètres
+periode = '2010-2024'
+fichier = './data/processed/meteo_pivot_' + periode + '.csv'
+meteobydate = pd.read_csv(fichier, sep = ';')
 
-def graph_repartition(param_meteo, nom_param_meteo, libelle_echelle_y):
+def graph_repartition(df, param_meteo, nom_param_meteo, libelle_echelle_y):
     fig, axes = plt.subplots(1, 2, figsize=(20, 10))
-    sns.boxplot(y = param_meteo, data = meteobydate.valeur, ax = axes[0])
+    sns.boxplot(y = param_meteo, data = df, ax = axes[0])
     axes[0].set_title("Variation de " + nom_param_meteo + ", période " + periode)
     axes[0].set_ylabel(libelle_echelle_y)
     #axes[0].xlabel("Stations")
 
-    sns.histplot(x = param_meteo, data = meteobydate.valeur, ax = axes[1])
+    sns.histplot(x = param_meteo, data = df, ax = axes[1])
     axes[1].set_title("distribution de " + nom_param_meteo + ", période " + periode)
-    axes[1].set_ylabel(libelle_echelle_y)
+    axes[1].set_xlabel(libelle_echelle_y)
+    axes[1].set_ylabel("Effectif")
     #axes[1].xlabel("Altitude (m)")
     plt.savefig('./reports/figures/' + param_meteo + '_' + periode + '.png')
     plt.show();
-graph_repartition('TN', 'Température minimale (TN)', 'Température (°C)')
-graph_repartition('TX', 'Température maximale (TN)', 'Température (°C)')
-graph_repartition('RR', 'Précipitations (RR)', 'Pluie (mm)')
-graph_repartition('GLOT', 'Rayonnement global (GLOT)', 'Rayonnement (J/cm²)')
-graph_repartition('ETP', 'Evapotranspiration potentielle (ETP)', 'mm')
+graph_repartition(meteobydate, 'TN', 'Température minimale (TN)', 'Température (°C)')
+graph_repartition(meteobydate, 'TX', 'Température maximale (TN)', 'Température (°C)')
+graph_repartition(meteobydate[meteobydate.RR > 0], 'RR', 'Précipitations (RR) positives', 'Pluie (mm)')
+graph_repartition(meteobydate[(meteobydate.RR < 5.6) & meteobydate.RR > 0], 'RR', 'Précipitations (RR) non extrêmes', 'Pluie (mm)')
+graph_repartition(meteobydate, 'GLOT', 'Rayonnement global (GLOT)', 'Rayonnement (J/cm²)')
+graph_repartition(meteobydate, 'ETP', 'Evapotranspiration potentielle (ETP)', 'mm')
+
+# Etude des valeurs extrêmes:
+# ETP
+print(meteobydate[meteobydate.ETP > 8].TX.describe())
+# ETP extrême les jours où les autres paramètres favorisant l'ETP ne sont pas extrêmes
+print(meteobydate[(meteobydate.ETP > 8) & (meteobydate.TX < 25) & (meteobydate.RR < 15) & (meteobydate.GLOT < 3000)])
+# ETP avec température à 16.7 suspect
+# pluies
+plt.figure(figsize = (10,5))
+meteobydate['presence_RR'] = (meteobydate.RR > 0)
+sns.countplot(x = "presence_RR", data = meteobydate)
+plt.savefig('./reports/figures/RR_presence_' + periode + '.png')
+plt.show();
+meteobyrainday = meteobydate[meteobydate.RR > 0]
+print('cumul de pluie 75% des jours pluvieux: ', meteobyrainday.RR.describe()['75%'])
+plt.figure(figsize = (5,5))
+g = sns.histplot(x = 'RR', data = meteobyrainday[meteobyrainday.RR > 5.6], bins = [5, 10, 15, 20, 30, 50])
+plt.set_title("distribution de pluies extrêmes " + période " + periode)
+plt.set_xlabel(libelle_echelle_y)
+plt.set_ylabel("Effectif")
+g.set_xticks([5, 10, 15, 20, 30, 50], labels = ['5', '10', '15', '20', '30', '500'])
+plt.savefig('./reports/figures/RR_extreme_' + periode + '.png')
+plt.show();
+
+###########################
 
 plt.figure(figsize=(5, 5))
-sns.scatterplot(x = 'TN', y = 'TX', data = meteobydate.valeur, label = "TN en fonction de TX")
+sns.scatterplot(x = 'TN', y = 'TX', data = meteobydate, label = "TN en fonction de TX")
 sns.lineplot(x = [-30, 40], y = [-30, 40], label = "première bissectrice")
 plt.title("TN en fonction de TX, periode " + periode)
 plt.legend()
@@ -81,21 +103,35 @@ plt.savefig('./reports/figures/TN_fonction_TX_' + periode + '.png')
 plt.show();
 
 plt.figure(figsize=(5, 5))
-sns.scatterplot(x = 'TN', y = 'GLOT', data = meteobydate.valeur, label = "TN en fonction de GLOT")
+sns.scatterplot(x = 'TX', y = 'GLOT', data = meteobydate, label = "TX en fonction de GLOT")
 plt.title("TN en fonction de GLOT, periode " + periode)
 plt.legend()
-plt.savefig('./reports/figures/TN_fonction_GLOT_' + periode + '.png')
+plt.savefig('./reports/figures/TX_fonction_GLOT_' + periode + '.png')
 plt.show();
 
 plt.figure(figsize=(5, 5))
-sns.scatterplot(x = 'ETP', y = 'GLOT', data = meteobydate.valeur, label = "ETP en fonction de GLOT")
+sns.scatterplot(x = 'ETP', y = 'GLOT', data = meteobydate, label = "ETP en fonction de GLOT")
 plt.title("ETP en fonction de GLOT, periode " + periode)
 plt.legend()
 plt.savefig('./reports/figures/ETP_fonction_GLOT_' + periode + '.png')
 plt.show();
 
+plt.figure(figsize=(5, 5))
+sns.scatterplot(x = 'TX', y = 'RR', data = meteobydate, label = "RR en fonction de TX")
+plt.title("RR en fonction de TX, periode " + periode)
+plt.legend()
+plt.savefig('./reports/figures/RR_fonction_TX_' + periode + '.png')
+plt.show();
 
-meteobydate.valeur.corr(method = "spearman")
+
+meteobydate[['TN', 'TX', 'ETP', 'RR', 'GLOT']].corr(method = "pearson")
 from scipy.stats import pearsonr
-pearsonr(meteobydate.valeur.TN, meteobydate.valeur.TX) # corrélation
-pearsonr(meteobydate.valeur.TN.tolist(), meteobydate.valeur.ETP.tolist()) # corrélation
+#dropna nécessaire
+pearsonr(meteobydate.TN, meteobydate.TX) # corrélation
+pearsonr(meteobydate.TN.tolist(), meteobydate.ETP.tolist()) # corrélation
+pearsonr(meteobydate.TN, meteobydate.RR) # corrélation
+
+plt.figure(figsize = (10, 10))
+sns.heatmap(data =  meteobydate[['TN', 'TX', 'ETP', 'RR', 'GLOT']].corr(), annot = True, cmap = "coolwarm")
+plt.savefig('./reports/figures/heatmap_parametres_' + periode + '.png')
+plt.show();
