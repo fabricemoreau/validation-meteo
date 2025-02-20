@@ -85,7 +85,7 @@ meteobyrainday = meteobydate[meteobydate.RR > 0]
 print('cumul de pluie 75% des jours pluvieux: ', meteobyrainday.RR.describe()['75%'])
 plt.figure(figsize = (5,5))
 g = sns.histplot(x = 'RR', data = meteobyrainday[meteobyrainday.RR > 5.6], bins = [5, 10, 15, 20, 30, 50])
-plt.set_title("distribution de pluies extrêmes " + période " + periode)
+plt.set_title("distribution de pluies extrêmes " + periode  + "periode")
 plt.set_xlabel(libelle_echelle_y)
 plt.set_ylabel("Effectif")
 g.set_xticks([5, 10, 15, 20, 30, 50], labels = ['5', '10', '15', '20', '30', '500'])
