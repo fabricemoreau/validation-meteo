@@ -2,6 +2,7 @@
     "recommendations": [
         "ms-python.python",
         "matangover.mypy",
-        "ms-python.pylint"
+        "ms-python.pylint",
+        "ms-toolsai.jupyter"
     ]
 }
