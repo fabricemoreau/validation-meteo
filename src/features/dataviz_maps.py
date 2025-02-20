@@ -92,3 +92,25 @@ def affiche_carte_stations(stations_df: pd.DataFrame, titre, filename):
     plt.show();
 affiche_carte_stations(stations[stations.Altitude == 0 ], "Station au niveau de la mer", './reports/figures/carte_stations_0m.png')
 affiche_carte_stations(stations[stations.Altitude > 800], "Stations à plus de 800 mètres d'altitude", './reports/figures/carte_stations_800m.png')
+
+
+#### cartes des pluies extrêmes
+fichier = './data/processed/meteo_pivot_2010-2024.csv'
+meteobydate = pd.read_csv(fichier, sep = ';')
+plt.figure(figsize=(10, 10))
+m =  Basemap(llcrnrlon=-5.,llcrnrlat=42.,urcrnrlon=9.5,urcrnrlat=51.,
+             resolution='i', projection='tmerc', lat_0 = 39.5, lon_0 = -3.25)
+
+#m.drawmapboundary(fill_color='aqua')
+#m.fillcontinents(color='coral',lake_color='aqua')
+m.drawcoastlines()
+m.drawcountries()
+m.shadedrelief()
+x, y = m(stations363.Longitude, stations363.Latitude)
+x2, y2 = m(stationstotales.Longitude, stationstotales.Latitude)
+m.scatter(x2, y2, marker='D',color='lightgrey', label = "absente échantillon")
+m.scatter(x, y, marker='D',color='m', label = "présente dans échantillon")
+plt.title("Carte de l'échantillon de 363 stations")
+plt.legend()
+plt.savefig('./reports/figures/carte_363_stations_meteo.png')
+plt.show();
