@@ -2,3 +2,4 @@
 # No pip freeze here, just the tools you need.
 ipykernel 
 jupyter
+ipympl # pour prévisualisation graphique dans VSCODE

@@ -2,7 +2,10 @@
 # No pip freeze here, just the tools you need.
 pandas
 numpy
-#matplotlib
-#seaborn
+matplotlib
+seaborn
+duckdb # pour découper jeux de données
+basemap # pour afficher des cartes
+scikit-learn # pour modèles et calcul de distances euclidiennes
 #scipy
 #scikit-learn
