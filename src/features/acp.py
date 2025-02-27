@@ -1,6 +1,4 @@
-'''
-ACP sur les données
-'''
+""" ACP sur les données """
 
 #%matplotlib widget
 import numpy as np
@@ -12,22 +10,27 @@ from sklearn.decomposition import PCA
 
 periode = '2010-2024'
 fichier = './data/processed/meteo_pivot_cleaned_' + periode + '.csv'
-fichier = './data/processed/meteo_pivot_cleaned_time_space_2010-2024.csv'
+#fichier = './data/processed/meteo_pivot_cleaned_time_space_2010-2024.csv'
 meteobydate = pd.read_csv(fichier, sep = ';', parse_dates = True)
+meteobydate.datemesure = pd.to_datetime(meteobydate.datemesure).round('d')
+meteobydate = meteobydate.dropna()
 
 parametres = ['ETP', 'GLOT', 'RR', 'TN', 'TX']
 
-meteobydate.datemesure = pd.to_datetime(meteobydate.datemesure).round('d')
+
+y = meteobydate.anomalie
+anomalies = meteobydate[[s + '_anomalie' for s in parametres]]
 
 col_to_keep = [s + '_origine' for s in parametres]
-for i in range(1, 6):
-    col_to_keep.extend([s + '_' + str(i) for s in parametres])
+#for i in range(1, 6):
+#    col_to_keep.extend([s + '_' + str(i) for s in parametres])
 col_to_keep.extend(['Altitude', 'Lambert93x', 'Lambert93y', 'datemesure', 'jourjulien', 'mois', 'saison', 'pluieclassif_origine'])
 df = meteobydate[col_to_keep]
 
 pluie_enc = OneHotEncoder(sparse_output = False)
 pluies = pd.DataFrame(pluie_enc.fit_transform(df[['pluieclassif_origine']]), columns = pluie_enc.get_feature_names_out())
-df = pd.concat([df.drop(columns = 'pluieclassif_origine'), pluies], axis = 1)
+df = pd.concat([df.drop(columns = 'pluieclassif_origine').reset_index(), pluies], axis = 1)
+
 
 del pluies
 del meteobydate
@@ -36,7 +39,7 @@ del meteobydate
 sc = StandardScaler()
 df_normalise =sc.fit_transform(df.drop(columns = "datemesure"))
 df_normalise = pd.DataFrame(df_normalise, columns = df.drop(columns = "datemesure").columns)
-
+# df_normalise joue le rôle de X
 
 plt.figure(figsize = (30, 30))
 sns.heatmap(df_normalise.corr(), annot=True, cmap='viridis');
@@ -55,13 +58,29 @@ plt.savefig('./reports/figures/acp_variance_expliquee.png')
 plt.show();
 
 
-L1 = list(pca.explained_variance_ratio_[0:10])
-L1.append(sum(pca.explained_variance_ratio_[10:]))
+L1 = list(pca.explained_variance_ratio_[0:8])
+L1.append(sum(pca.explained_variance_ratio_[8:]))
 plt.figure()
-plt.pie(L1, labels=['PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8', 'PC9', 'PC10', 'Autres'], 
+plt.pie(L1, labels=['PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8', 'Autres'], 
         autopct='%1.3f%%')
 plt.savefig('./reports/figures/acp_variance_expliquee_ratio.png')
 plt.show();
+
+# graphe 2D
+pca = PCA(n_components = 2)
+data_2D = pca.fit_transform(df_normalise)
+fig = plt.figure(figsize = (20, 20))
+plt.scatter(data_2D[:, 0], data_2D[:, 1], c = y, cmap=plt.cm.Spectral)
+plt.xlabel('PCA 1')
+plt.ylabel('PCA 2')
+plt.title("Données projetées sur les 2 axes de l'ACT")
+plt.legend()
+plt.savefig('./reports/figures/acp_graphe2d.png')
+plt.show();
+
+print("La part de variance expliquée est", round(pca.explained_variance_ratio_.sum(),2))
+
+
 
 # cercle des corrélations
 racine_valeurs_propres = np.sqrt(pca.explained_variance_)
