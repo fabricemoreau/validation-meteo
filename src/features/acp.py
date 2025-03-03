@@ -67,6 +67,19 @@ plt.savefig('./reports/figures/acp_variance_expliquee_ratio.png')
 plt.show();
 
 # graphe 2D
+fig = plt.figure(figsize = (20, 20))
+plt.scatter(data_2D[:, 0], data_2D[:, 1], c = anomalies.TX_anomalie, cmap=plt.cm.Spectral)
+plt.xlabel('PCA 1')
+plt.ylabel('PCA 2')
+plt.title("Données projetées sur les 2 axes de l'ACT : anomalies TX")
+plt.legend()
+plt.savefig('./reports/figures/acp_graphe2d_TX.png')
+plt.show();
+
+print("La part de variance expliquée est", round(pca.explained_variance_ratio_.sum(),2))
+
+
+# graphe 2D anomalies TX
 pca = PCA(n_components = 2)
 data_2D = pca.fit_transform(df_normalise)
 fig = plt.figure(figsize = (20, 20))
@@ -77,8 +90,6 @@ plt.title("Données projetées sur les 2 axes de l'ACT")
 plt.legend()
 plt.savefig('./reports/figures/acp_graphe2d.png')
 plt.show();
-
-print("La part de variance expliquée est", round(pca.explained_variance_ratio_.sum(),2))
 
 
 
