@@ -98,18 +98,18 @@ affiche_carte_stations(stations[stations.Altitude > 800], "Stations à plus de 8
 fichier = './data/processed/meteo_pivot_2010-2024.csv'
 meteobydate = pd.read_csv(fichier, sep = ';')
 plt.figure(figsize=(10, 10))
-m =  Basemap(llcrnrlon=-5.,llcrnrlat=42.,urcrnrlon=9.5,urcrnrlat=51.,
+mapFrance =  Basemap(llcrnrlon=-5.,llcrnrlat=42.,urcrnrlon=9.5,urcrnrlat=51.,
              resolution='i', projection='tmerc', lat_0 = 39.5, lon_0 = -3.25)
 
-#m.drawmapboundary(fill_color='aqua')
-#m.fillcontinents(color='coral',lake_color='aqua')
-m.drawcoastlines()
-m.drawcountries()
-m.shadedrelief()
-x, y = m(stations363.Longitude, stations363.Latitude)
-x2, y2 = m(stationstotales.Longitude, stationstotales.Latitude)
-m.scatter(x2, y2, marker='D',color='lightgrey', label = "absente échantillon")
-m.scatter(x, y, marker='D',color='m', label = "présente dans échantillon")
+#mapFrance.drawmapboundary(fill_color='aqua')
+#mapFrance.fillcontinents(color='coral',lake_color='aqua')
+mapFrance.drawcoastlines()
+mapFrance.drawcountries()
+mapFrance.shadedrelief()
+x, y = mapFrance(stations363.Longitude, stations363.Latitude)
+x2, y2 = mapFrance(stationstotales.Longitude, stationstotales.Latitude)
+mapFrance.scatter(x2, y2, marker='D',color='lightgrey', label = "absente échantillon")
+mapFrance.scatter(x, y, marker='D',color='m', label = "présente dans échantillon")
 plt.title("Carte de l'échantillon de 363 stations")
 plt.legend()
 plt.savefig('./reports/figures/carte_363_stations_meteo.png')
