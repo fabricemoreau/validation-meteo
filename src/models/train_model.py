@@ -15,7 +15,7 @@ def isolationForest(df: pd.DataFrame, parameters:list):
     """
     for param in tqdm(parameters, desc="Training Isolation Forests"):
         print("training", param)
-        features = [f"{param}_origine", "month_sin", "month_cos"]
+        features = [f"{param}_origine", "month_sin", "month_cos", "Latitude", "Longitude", "Altitude"]
         # Split data into train and test sets
         train_data, test_data = train_test_split(df, test_size=0.2, random_state=42)
         df.loc[test_data.index, "is_test"] = 1  # Mark test rows
