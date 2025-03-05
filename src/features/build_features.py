@@ -31,8 +31,8 @@ meteobydate['saison'] = (meteobydate['mois'] - 1) // 3
 for param in parametres:
     meteobydate[param + '_difference'] = (meteobydate[param + '_origine'] - meteobydate[param])
     meteobydate[param + '_anomalie'] = (np.abs(meteobydate[param + '_difference']) > 0).astype(int)
-    # on complète les na valeur d'origine par valeur validée seulement en cas d'anomalie
-    meteobydate.loc[meteobydate[param + '_anomalie'] == 1, param + '_origine'] = meteobydate.loc[meteobydate[param + '_anomalie'] == 1, param]
+    # on complète les na valeur d'origine par valeur validée seulement quand pas d'anomalie
+    meteobydate.loc[meteobydate[param + '_anomalie'] == 0, param + '_origine'] = meteobydate.loc[meteobydate[param + '_anomalie'] == 0, param]
     # si "_origine" est à na, il y a une anomalie même si on ne connait pas la valeur d'origine, mais on laisse à na la valeur d'origine
     meteobydate.loc[meteobydate[param + '_origine'].isna(), param + '_anomalie'] = 1
     
