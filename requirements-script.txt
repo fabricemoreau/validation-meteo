@@ -9,3 +9,4 @@ basemap # pour afficher des cartes
 scikit-learn # pour modèles et calcul de distances euclidiennes
 #scipy
 #scikit-learn
+tensorflow[and-cuda]
