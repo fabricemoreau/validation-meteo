@@ -12,4 +12,5 @@ tqdm
 typer
 typing_extensions
 python-docx 
+tensorflow[and-cuda]
 streamlit
