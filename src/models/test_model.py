@@ -8,10 +8,23 @@ import train_model
 import typer
 from typing_extensions import Annotated
 from tqdm import tqdm
-
+import os
 
 testModel = typer.Typer()
 
+def join_spatial_info(df:pd.DataFrame, spatial_data_path: Path):
+    """
+    Merges the spatial information with the meteorological one
+    Parameters:
+    df: meteo dataset.
+    spatial_data_path: path to the dataset with the information per station
+    """
+    print(f"reading spatial data from {spatial_data_path}")
+    stations_df = pd.read_csv(spatial_data_path, sep=";")
+    print(stations_df.head())
+    # Merge station data into the meteorological dataset
+    df = df.merge(stations_df, left_on="codearvalis", right_on="Station", how="left").drop(columns=["Station"])
+    return df
 
 def preprocessing(df: pd.DataFrame, parameters: list):
     """
@@ -21,8 +34,6 @@ def preprocessing(df: pd.DataFrame, parameters: list):
     df : DataFrame with the meteorological data
     parameters : list of parameters to consider, (typically 'ETP', 'GLOT', 'RR', 'TN', 'TX')
     """
-    # Convert date column to datetime format
-    df["datemesure"] = pd.to_datetime(df["datemesure"])
 
     # Extract date-based features
     df["month"] = df["datemesure"].dt.month
@@ -120,8 +131,17 @@ def train(
     df = pd.read_csv(databasefilepath, sep=";")
     print(df.head())
     parameters = ["ETP", "GLOT", "RR", "TN", "TX"]
-    df = preprocessing(df, parameters)
+    # Convert date column to datetime format
+    df["datemesure"] = pd.to_datetime(df["datemesure"])
+    if not all(f"{param}_anomaly" in df.columns for param in parameters):
+        df = preprocessing(df, parameters)
+        df.to_csv(databasefilepath.parents[1] / "preprocessed" / databasefilepath.name, index=False, sep=";")
+    if not all(spatialcolumn in df.columns for spatialcolumn in ["Latitude", "Longitude", "Altitude"]):
+        stationspath = databasefilepath.parents[1] / "raw" / "stationsmeteo.csv"
+        df = join_spatial_info(df, stationspath)
+        df.to_csv(databasefilepath.parents[1] / "preprocessed" / databasefilepath.name, index=False, sep=";")
     print(df.head())
+    print(df.info())
     model = getattr(train_model, modelname)
     model(df, parameters)
     # print(df)
