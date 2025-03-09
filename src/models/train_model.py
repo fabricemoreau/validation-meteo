@@ -2,20 +2,23 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import pandas as pd
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 from tqdm import tqdm
 
 
-def isolationForest(df: pd.DataFrame, parameters:list):
+def isolationForest(df: pd.DataFrame, parameters:list, spatial_info:bool=False):
     """
     Apply isolation forest algorithm on each parameter separately.
+    
     Parameters:
     df: dataframe to apply the algorithm
     parameters: list of parameters to consider, (typically 'ETP', 'GLOT', 'RR', 'TN', 'TX') 
     """
     for param in tqdm(parameters, desc="Training Isolation Forests"):
         print("training", param)
-        features = [f"{param}_origine", "month_sin", "month_cos", "Latitude", "Longitude", "Altitude"]
+        features = [f"{param}_origine", "month_sin", "month_cos"]
+        if spatial_info:
+            features.append("cluster")
         # Split data into train and test sets
         train_data, test_data = train_test_split(df, test_size=0.2, random_state=42)
         df.loc[test_data.index, "is_test"] = 1  # Mark test rows
@@ -53,5 +56,14 @@ def isolationForest(df: pd.DataFrame, parameters:list):
             df.loc[test_data.index, f"{param}_anomaly"],
             df.loc[test_data.index, f"{param}_is_anomaly"],
         )
-        print(f"Accuracy for {param}: {accuracy:.4f}")
+        precision = precision_score(
+            df.loc[test_data.index, f"{param}_anomaly"],
+            df.loc[test_data.index, f"{param}_is_anomaly"],
+        )
+        recall = recall_score(
+            df.loc[test_data.index, f"{param}_anomaly"],
+            df.loc[test_data.index, f"{param}_is_anomaly"],
+        )
+        print(f"{param} -> Accuracy: {accuracy:.3f}, Precision: {precision:.3f}, Recall: {recall:.3f}")
+
     return df
