@@ -201,3 +201,4 @@ valid_df.to_csv(path + '/meteobydate_valid_pred.csv', sep = ';', index = False)
 #- regarder années 2023-2024
 #-optimiser: ajouter des dropouts?
 #-modèle pour détecter anomalie à partir de sortie autoencodeur!
+# calculer RMSE
