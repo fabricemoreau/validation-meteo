@@ -13,4 +13,6 @@ typer
 typing_extensions
 python-docx 
 tensorflow[and-cuda]
+graphviz # pour graphiques de modèles cnn
+pydot # pour graphiques de modèles cnn
 streamlit
