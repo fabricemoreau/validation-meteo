@@ -48,6 +48,9 @@ def prepare(
     joinspatial: Annotated[
         bool, typer.Option(help="Join also the spatial information to the training")
     ] = True,
+    random_state: Annotated[
+        int, typer.Option(help="Set the random_state for reproducibility")
+    ] = None,
 ):
     """
     Prepare to train the model with name `modelname` to the database extracted from `databasefilepath`.
@@ -75,7 +78,7 @@ def prepare(
                 / SUBPATHS.DATA_RAW.value
                 / "stationsmeteo.csv"
             )
-            df = join_spatial_info(df, stationspath)
+            df = join_spatial_info(df, stationspath, random_state=random_state)
     preprocessedDatabaseFilePath = (
         databasefilepath.parents[1]
         / SUBPATHS.DATA_PREPROCESSED.value
@@ -118,6 +121,9 @@ def train(
     savereport: Annotated[
         bool, typer.Option(help="Save report with results in data/reports")
     ] = False,
+    random_state: Annotated[
+        int, typer.Option(help="Set the random_state for reproducibility")
+    ] = None,
 ):
     """
     Train the model with name `modelname` to the database extracted from `databasefilepath`.
@@ -153,7 +159,7 @@ def train(
     print(df.head())
     print(df.info())
     model = getattr(train_model, modelname)
-    model(df, parameters, joinspatial)
+    model(df, parameters, joinspatial, random_state=random_state)
     # print(df)
     print("save to:", resultsDatabaseFilePath)
     df.to_csv(resultsDatabaseFilePath, index=False)

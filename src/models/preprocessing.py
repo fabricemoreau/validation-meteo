@@ -9,12 +9,15 @@ from tqdm import tqdm
 from plotting import plot_clusters_3d, plot_elbow_and_silhouette
 
 
-def join_spatial_info(df: pd.DataFrame, spatial_data_path: Path, plots: bool = True):
+def join_spatial_info(
+    df: pd.DataFrame, spatial_data_path: Path, plots: bool = True, random_state=None
+):
     """
     Merges the spatial information with the meteorological one
     Parameters:
     df: meteo dataset.
     spatial_data_path: path to the dataset with the information per station
+    random_state : set random_state of sklearn function (for reproducibility)
     """
     print(f"reading spatial data from {spatial_data_path}")
     stations_df = pd.read_csv(spatial_data_path, sep=";")
@@ -30,7 +33,7 @@ def join_spatial_info(df: pd.DataFrame, spatial_data_path: Path, plots: bool = T
         plot_elbow_and_silhouette(stations_df_pos_normalized, 20)
 
     num_clusters = 4  # You can adjust this based on the elbow method or silhouette
-    kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init=10)
+    kmeans = KMeans(n_clusters=num_clusters, random_state=random_state, n_init=10)
     stations_df["cluster"] = kmeans.fit_predict(stations_df_pos_normalized)
     plot_clusters_3d(stations_df)
     # Merge station data into the meteorological dataset
