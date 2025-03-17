@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from enum import Enum
-from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix, classification_report
 from docx import Document
 from pathlib import Path
 
@@ -222,8 +222,10 @@ def save_results_to_word(df, parameters, filename="Anomaly_Report.doc", imagesdi
         acc = accuracy_score(test_data[f"{param}_anomaly"], test_data[f"{param}_is_anomaly"])
         prec = precision_score(test_data[f"{param}_anomaly"], test_data[f"{param}_is_anomaly"], zero_division=0)
         rec = recall_score(test_data[f"{param}_anomaly"], test_data[f"{param}_is_anomaly"], zero_division=0)
+        classif_report = classification_report(test_data[f"{param}_anomaly"], test_data[f"{param}_is_anomaly"])
         
         doc.add_paragraph(f"Accuracy: {acc:.3f}, Precision: {prec:.3f}, Recall: {rec:.3f}")
+        doc.add_paragraph(classif_report)
         table = doc.add_table(rows=3, cols=3)
         table.style = 'Table Grid'
         table.cell(0, 1).text = 'Predicted Normal'
