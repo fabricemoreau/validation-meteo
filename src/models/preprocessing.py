@@ -27,23 +27,27 @@ def join_spatial_info(df: pd.DataFrame, spatial_data_path: Path, plots: bool = T
 
     # Cluster stations using Latitude, Longitude, and Altitude
     if plots:
-        plot_elbow_and_silhouette(
-            stations_df_pos_normalized, 20
-        )
+        plot_elbow_and_silhouette(stations_df_pos_normalized, 20)
 
     num_clusters = 4  # You can adjust this based on the elbow method or silhouette
     kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init=10)
-    stations_df["cluster"] = kmeans.fit_predict(
-        stations_df_pos_normalized
-    )
+    stations_df["cluster"] = kmeans.fit_predict(stations_df_pos_normalized)
     plot_clusters_3d(stations_df)
     # Merge station data into the meteorological dataset
-    df = df.merge(
-        stations_df[["Station", "Latitude", "Longitude", "Altitude", "cluster"]],
-        left_on="codearvalis",
-        right_on="Station",
-        how="left",
-    ).drop(columns=["Station"])
+    # drop columns before merge to avoid duplicated
+    df = (
+        df.drop(
+            columns=["Station", "Latitude", "Longitude", "Altitude", "cluster"],
+            errors="ignore",
+        )
+        .merge(
+            stations_df[["Station", "Latitude", "Longitude", "Altitude", "cluster"]],
+            left_on="codearvalis",
+            right_on="Station",
+            how="left",
+        )
+        .drop(columns=["Station"])
+    )
     return df
 
 
@@ -66,7 +70,7 @@ def preprocessing(df: pd.DataFrame, parameters: list):
     df["is_test"] = 0
 
     # Create separate anomaly columns based on human corrections, using a dynamic threshold
-    #TODO: get out this function
+    # TODO: get out this function
     def detect_real_anomaly(row, param, std_threshold):
         threshold = std_threshold[param]  # Use parameter-specific threshold
         return 1 if abs(row[param] - row[f"{param}_origine"]) > threshold else 0
