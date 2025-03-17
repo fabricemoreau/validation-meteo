@@ -1,5 +1,6 @@
 from inspect import getmembers, isfunction
 from pathlib import Path
+from enum import Enum
 
 import pandas as pd
 import train_model
@@ -9,6 +10,19 @@ from typing_extensions import Annotated
 
 from plotting import plot_anomalies, PlotMode, save_results_to_word
 from preprocessing import join_spatial_info, preprocessing
+
+
+class SUBPATHS(Enum):
+    """
+    To define all subpaths where file are stored
+    """
+
+    MODEL_RESULTS = "testModelResults"
+    MODEL_PREPROCESSING = "preprocessed"
+    REPORTS = "reports"
+    FIGURES = "figures"
+    BOTH = "both"
+
 
 meteo_models = typer.Typer()
 
@@ -50,7 +64,7 @@ def train(
     print("reading:", databasefilepath)
     resultsDatabaseFilePath = (
         databasefilepath.parents[1]
-        / "testModelResults"
+        / SUBPATHS.MODEL_RESULTS.value
         / f"{modelname}_anomaly_results.csv"
     )
     print("save to:", resultsDatabaseFilePath)
@@ -62,7 +76,9 @@ def train(
     if not all(f"{param}_anomaly" in df.columns for param in parameters):
         df = preprocessing(df, parameters)
         df.to_csv(
-            databasefilepath.parents[1] / "preprocessed" / databasefilepath.name,
+            databasefilepath.parents[1]
+            / SUBPATHS.MODEL_PREPROCESSING.value
+            / databasefilepath.name,
             index=False,
             sep=";",
         )
@@ -75,7 +91,9 @@ def train(
             stationspath = databasefilepath.parents[1] / "raw" / "stationsmeteo.csv"
             df = join_spatial_info(df, stationspath)
             df.to_csv(
-                databasefilepath.parents[1] / "preprocessed" / databasefilepath.name,
+                databasefilepath.parents[1]
+                / SUBPATHS.MODEL_PREPROCESSING.value
+                / databasefilepath.name,
                 index=False,
                 sep=";",
             )
@@ -89,9 +107,15 @@ def train(
         check(resultsDatabaseFilePath)
     if savereport:
         reportPath = (
-            databasefilepath.parents[1] / "reports" / f"{modelname}_anomaly_results.doc"
+            databasefilepath.parents[1]
+            / SUBPATHS.REPORTS.value
+            / f"{modelname}_anomaly_results.doc"
         )
-        imagesDir = databasefilepath.parents[1] / "reports" / "figures"
+        imagesDir = (
+            databasefilepath.parents[1]
+            / SUBPATHS.REPORTS.value
+            / SUBPATHS.FIGURES.value
+        )
         save_results_to_word(df, parameters, filename=reportPath, imagesdir=imagesDir)
 
 
@@ -126,10 +150,14 @@ def check(
         modelname = resultsdatabasefilepath.name.split("_")[0]
         reportPath = (
             resultsdatabasefilepath.parents[1]
-            / "reports"
+            / SUBPATHS.REPORTS.value
             / f"{modelname}_anomaly_results.doc"
         )
-        imagesDir = resultsdatabasefilepath.parents[1] / "reports" / "figures"
+        imagesDir = (
+            resultsdatabasefilepath.parents[1]
+            / SUBPATHS.REPORTS.value
+            / SUBPATHS.FIGURES.value
+        )
         save_results_to_word(df, parameters, filename=reportPath, imagesdir=imagesDir)
     else:
         for param in parameters:
