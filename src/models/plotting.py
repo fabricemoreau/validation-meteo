@@ -112,11 +112,11 @@ def plot_anomalies(
     test_data = df[df["is_test"] == 1]
     test_data["anomaly_type"] = test_data.apply(
         lambda row: "TP"
-        if row[f"{parameter}_anomaly"] == 1 and row[f"{parameter}_is_anomaly"] == 1
+        if row[f"{parameter}_anomaly"] == 1 and row[f"{parameter}_anomaly_pred"] == 1
         else "FN"
         if row[f"{parameter}_anomaly"] == 1
         else "FP"
-        if row[f"{parameter}_is_anomaly"] == 1
+        if row[f"{parameter}_anomaly_pred"] == 1
         else "TN",
         axis=1,
     )
@@ -218,11 +218,11 @@ def save_results_to_word(df, parameters, filename="Anomaly_Report.doc", imagesdi
     
     for param in parameters:
         doc.add_heading(f"Results for {param}", level=2)
-        cm = confusion_matrix(test_data[f"{param}_anomaly"], test_data[f"{param}_is_anomaly"])
-        acc = accuracy_score(test_data[f"{param}_anomaly"], test_data[f"{param}_is_anomaly"])
-        prec = precision_score(test_data[f"{param}_anomaly"], test_data[f"{param}_is_anomaly"], zero_division=0)
-        rec = recall_score(test_data[f"{param}_anomaly"], test_data[f"{param}_is_anomaly"], zero_division=0)
-        classif_report = classification_report(test_data[f"{param}_anomaly"], test_data[f"{param}_is_anomaly"])
+        cm = confusion_matrix(test_data[f"{param}_anomaly"], test_data[f"{param}_anomaly_pred"])
+        acc = accuracy_score(test_data[f"{param}_anomaly"], test_data[f"{param}_anomaly_pred"])
+        prec = precision_score(test_data[f"{param}_anomaly"], test_data[f"{param}_anomaly_pred"], zero_division=0)
+        rec = recall_score(test_data[f"{param}_anomaly"], test_data[f"{param}_anomaly_pred"], zero_division=0)
+        classif_report = classification_report(test_data[f"{param}_anomaly"], test_data[f"{param}_anomaly_pred"])
         
         doc.add_paragraph(f"Accuracy: {acc:.3f}, Precision: {prec:.3f}, Recall: {rec:.3f}")
         doc.add_paragraph(classif_report)
