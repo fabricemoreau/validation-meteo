@@ -189,7 +189,7 @@ def plot_anomalies(
 
 
 # Function to save results to a Word document
-def save_results_to_word(df, parameters, filename="Anomaly_Report.doc", imagesdir=None):
+def save_results_to_word(df, parameters, modelname, filename="Anomaly_Report.doc", imagesdir=None):
     """
     Generates a Word document summarizing the anomaly detection results.
 
@@ -204,6 +204,8 @@ def save_results_to_word(df, parameters, filename="Anomaly_Report.doc", imagesdi
         The dataframe containing anomaly detection results.
     parameters : list of str
         The list of meteorological parameters analyzed for anomalies.
+    modelname : str
+        Name of the model, used in figure filenames
     filename : str, optional
         The name of the output Word document (default is "Anomaly_Report.doc").
     
@@ -238,7 +240,8 @@ def save_results_to_word(df, parameters, filename="Anomaly_Report.doc", imagesdi
         table.cell(2, 2).text = str(cm[1, 1])
         
         # Save plots and add them to the document
-        plot_filename = f"{param}_anomaly_plot.png" if imagesdir is None else Path(imagesdir / f"{param}_anomaly_plot.png")
+        plot_filename = f"{modelname}_{param}_anomaly_plot.png" if imagesdir is None else Path(imagesdir /  f"{modelname}_{param}_anomaly_plot.png")
+        print("plot filename = ", plot_filename)
         plotMode = PlotMode.BOTH if all(
             spatialcolumn in df.columns
             for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
