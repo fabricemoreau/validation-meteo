@@ -17,14 +17,77 @@ class SUBPATHS(Enum):
     To define all subpaths where file are stored
     """
 
+    DATA_RAW = "raw"
+    DATA_PREPROCESSED = "preprocessed"
     MODEL_RESULTS = "testModelResults"
-    MODEL_PREPROCESSING = "preprocessed"
     REPORTS = "reports"
     FIGURES = "figures"
     BOTH = "both"
 
 
 meteo_models = typer.Typer()
+
+
+@meteo_models.command()
+def prepare(
+    modelname: Annotated[
+        str,
+        typer.Argument(
+            help=f"Name of the model to test, available models: {[name for name, obj in getmembers(train_model) if isfunction(obj) and obj.__module__ == 'train_model']}"
+        ),
+    ],
+    databasefilepath: Annotated[
+        Path, typer.Argument(help="Path of the database file")
+    ] = "data/processed/meteo_pivot_cleaned_2010-2024.csv",
+    parameters: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            help="Parameters to predict, to change run --parameters P1 --parameters P2 ..."
+        ),
+    ] = ["ETP", "GLOT", "RR", "TN", "TX"],
+    joinspatial: Annotated[
+        bool, typer.Option(help="Join also the spatial information to the training")
+    ] = True,
+):
+    """
+    Prepare to train the model with name `modelname` to the database extracted from `databasefilepath`.
+    A preprocessed version of the database is saved in the the folder 'preprocessed'
+
+    Parameters:
+    databasefilepath: path of the database
+    modelname: string containing the function name for the model, for example isolationForest, available functions are in train_model.py
+    """
+    print("reading:", databasefilepath)
+    df = pd.read_csv(databasefilepath, sep=";", parse_dates=["datemesure"])
+    print(df.head())
+
+
+    # Check if the df has been already preprocessed
+    if not all(f"{param}_anomaly" in df.columns for param in parameters):
+        df = preprocessing(df, parameters)
+    if joinspatial:
+        # Check if df has been already preprocessed with spatial data
+        if not all(
+            spatialcolumn in df.columns
+            for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
+        ):
+            stationspath = (
+                databasefilepath.parents[1]
+                / SUBPATHS.DATA_RAW.value
+                / "stationsmeteo.csv"
+            )
+            df = join_spatial_info(df, stationspath)
+    preprocessedDatabaseFilePath = (
+        databasefilepath.parents[1]
+        / SUBPATHS.DATA_PREPROCESSED.value
+        / f"meteo_pivot_{'-'.join(parameters)}_{joinspatial}.csv"
+    )
+    print("save to:", preprocessedDatabaseFilePath)
+    df.to_csv(
+        preprocessedDatabaseFilePath,
+        index=False,
+        sep=";",
+    )
 
 
 @meteo_models.command()
@@ -36,7 +99,10 @@ def train(
         ),
     ],
     databasefilepath: Annotated[
-        Path, typer.Argument(help="Path of the database file")
+        Path,
+        typer.Argument(
+            help="Path of the database file. If the model need special preprocessing, use the preprocessed database created with 'prepare' command"
+        ),
     ] = "data/processed/meteo_pivot_cleaned_2010-2024.csv",
     checkafter: Annotated[
         bool, typer.Option(help="Diretly run check afterwards")
@@ -61,47 +127,32 @@ def train(
     databasefilepath: path of the database
     modelname: string containing the function name for the model, for example isolationForest, available functions are in train_model.py
     """
-    print("reading:", databasefilepath)
     resultsDatabaseFilePath = (
         databasefilepath.parents[1]
         / SUBPATHS.MODEL_RESULTS.value
-        / f"{modelname}_anomaly_results.csv"
+        / f"{modelname}_{'-'.join(parameters)}_{joinspatial}_anomaly_results.csv"
     )
-    print("save to:", resultsDatabaseFilePath)
-    df = pd.read_csv(databasefilepath, sep=";")
+    
+    print("reading:", databasefilepath)
+    df = pd.read_csv(databasefilepath, sep=";", parse_dates=["datemesure"])
     print(df.head())
-    # Convert date column to datetime format
-    df["datemesure"] = pd.to_datetime(df["datemesure"])
+
     # Check if the df has been already preprocessed
     if not all(f"{param}_anomaly" in df.columns for param in parameters):
-        df = preprocessing(df, parameters)
-        df.to_csv(
-            databasefilepath.parents[1]
-            / SUBPATHS.MODEL_PREPROCESSING.value
-            / databasefilepath.name,
-            index=False,
-            sep=";",
-        )
+        raise Exception("Columns  '<param>_anomaly' missing in the database, please input a file built with command 'prepare'") 
     if joinspatial:
         # Check if df has been already preprocessed with spatial data
         if not all(
             spatialcolumn in df.columns
             for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
         ):
-            stationspath = databasefilepath.parents[1] / "raw" / "stationsmeteo.csv"
-            df = join_spatial_info(df, stationspath)
-            df.to_csv(
-                databasefilepath.parents[1]
-                / SUBPATHS.MODEL_PREPROCESSING.value
-                / databasefilepath.name,
-                index=False,
-                sep=";",
-            )
+            raise Exception("Spatial Columns missing in the database, please input a file built with command 'prepare'") 
     print(df.head())
     print(df.info())
     model = getattr(train_model, modelname)
     model(df, parameters, joinspatial)
     # print(df)
+    print("save to:", resultsDatabaseFilePath)
     df.to_csv(resultsDatabaseFilePath, index=False)
     if checkafter:
         check(resultsDatabaseFilePath)
@@ -109,7 +160,7 @@ def train(
         reportPath = (
             databasefilepath.parents[1]
             / SUBPATHS.REPORTS.value
-            / f"{modelname}_anomaly_results.doc"
+            / f"{modelname}_{'-'.join(parameters)}_{joinspatial}_anomaly_results.doc"
         )
         imagesDir = (
             databasefilepath.parents[1]
@@ -117,7 +168,6 @@ def train(
             / SUBPATHS.FIGURES.value
         )
         save_results_to_word(df, parameters, filename=reportPath, imagesdir=imagesDir)
-
 
 @meteo_models.command()
 def check(
@@ -151,7 +201,7 @@ def check(
         reportPath = (
             resultsdatabasefilepath.parents[1]
             / SUBPATHS.REPORTS.value
-            / f"{modelname}_anomaly_results.doc"
+            / f"{modelname}_{'-'.join(parameters)}_{joinspatial}_anomaly_results.doc"
         )
         imagesDir = (
             resultsdatabasefilepath.parents[1]
