@@ -61,7 +61,6 @@ def prepare(
     df = pd.read_csv(databasefilepath, sep=";", parse_dates=["datemesure"])
     print(df.head())
 
-
     # Check if the df has been already preprocessed
     if not all(f"{param}_anomaly" in df.columns for param in parameters):
         df = preprocessing(df, parameters)
@@ -132,21 +131,25 @@ def train(
         / SUBPATHS.MODEL_RESULTS.value
         / f"{modelname}_{'-'.join(parameters)}_{joinspatial}_anomaly_results.csv"
     )
-    
+
     print("reading:", databasefilepath)
     df = pd.read_csv(databasefilepath, sep=";", parse_dates=["datemesure"])
     print(df.head())
 
     # Check if the df has been already preprocessed
     if not all(f"{param}_anomaly" in df.columns for param in parameters):
-        raise Exception("Columns  '<param>_anomaly' missing in the database, please input a file built with command 'prepare'") 
+        raise Exception(
+            "Columns  '<param>_anomaly' missing in the database, please input a file built with command 'prepare'"
+        )
     if joinspatial:
         # Check if df has been already preprocessed with spatial data
         if not all(
             spatialcolumn in df.columns
             for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
         ):
-            raise Exception("Spatial Columns missing in the database, please input a file built with command 'prepare'") 
+            raise Exception(
+                "Spatial Columns missing in the database, please input a file built with command 'prepare'"
+            )
     print(df.head())
     print(df.info())
     model = getattr(train_model, modelname)
@@ -168,6 +171,7 @@ def train(
             / SUBPATHS.FIGURES.value
         )
         save_results_to_word(df, parameters, filename=reportPath, imagesdir=imagesDir)
+
 
 @meteo_models.command()
 def check(
@@ -201,7 +205,7 @@ def check(
         reportPath = (
             resultsdatabasefilepath.parents[1]
             / SUBPATHS.REPORTS.value
-            / f"{modelname}_{'-'.join(parameters)}_{joinspatial}_anomaly_results.doc"
+            / f"{modelname}_{'-'.join(parameters)}_anomaly_results.doc"
         )
         imagesDir = (
             resultsdatabasefilepath.parents[1]
