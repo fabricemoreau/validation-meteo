@@ -2,6 +2,7 @@ from inspect import getmembers, isfunction
 from pathlib import Path
 from enum import Enum
 
+import os
 import pandas as pd
 import train_model
 import typer
@@ -22,7 +23,6 @@ class SUBPATHS(Enum):
     MODEL_RESULTS = "testModelResults"
     REPORTS = "reports"
     FIGURES = "figures"
-    BOTH = "both"
 
 
 meteo_models = typer.Typer()
@@ -60,6 +60,20 @@ def prepare(
     databasefilepath: path of the database
     modelname: string containing the function name for the model, for example isolationForest, available functions are in train_model.py
     """
+    print("preparing folders")
+    for subpath in SUBPATHS:
+        # SUBPATHS.FIGURES is a special case
+        if subpath != SUBPATHS.FIGURES:
+            path = databasefilepath.parents[1] / subpath.value
+            if not os.path.exists(path):
+                print(f"create {path} directory")
+                os.makedirs(path)
+        else:
+            path = databasefilepath.parents[1] / SUBPATHS.REPORTS.value / SUBPATHS.FIGURES.value
+            if not os.path.exists(path):
+                print(f"create {path} directory")
+                os.makedirs(path)
+
     print("reading:", databasefilepath)
     df = pd.read_csv(databasefilepath, sep=";", parse_dates=["datemesure"])
     print(df.head())
@@ -176,7 +190,9 @@ def train(
             / SUBPATHS.REPORTS.value
             / SUBPATHS.FIGURES.value
         )
-        save_results_to_word(df, parameters, modelname, filename=reportPath, imagesdir=imagesDir)
+        save_results_to_word(
+            df, parameters, modelname, filename=reportPath, imagesdir=imagesDir
+        )
 
 
 @meteo_models.command()
@@ -218,7 +234,9 @@ def check(
             / SUBPATHS.REPORTS.value
             / SUBPATHS.FIGURES.value
         )
-        save_results_to_word(df, parameters, modelname, filename=reportPath, imagesdir=imagesDir)
+        save_results_to_word(
+            df, parameters, modelname, filename=reportPath, imagesdir=imagesDir
+        )
     else:
         for param in parameters:
             plot_anomalies(param, df, mode=mode)
