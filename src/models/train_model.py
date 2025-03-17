@@ -53,29 +53,29 @@ def isolationForest(
         )
 
         # Identify anomalies for the specific parameter
-        df.loc[test_data.index, f"{param}_is_anomaly"] = df.loc[
+        df.loc[test_data.index, f"{param}_anomaly_pred"] = df.loc[
             test_data.index, f"{param}_anomaly_score"
         ].apply(lambda x: 1 if x == -1 else 0)
 
         print(
             pd.crosstab(
                 df[f"{param}_anomaly"],
-                df[f"{param}_is_anomaly"],
+                df[f"{param}_anomaly_pred"],
                 rownames=["real"],
                 colnames=["predicted"],
             )
         )
         accuracy = accuracy_score(
             df.loc[test_data.index, f"{param}_anomaly"],
-            df.loc[test_data.index, f"{param}_is_anomaly"],
+            df.loc[test_data.index, f"{param}_anomaly_pred"],
         )
         precision = precision_score(
             df.loc[test_data.index, f"{param}_anomaly"],
-            df.loc[test_data.index, f"{param}_is_anomaly"],
+            df.loc[test_data.index, f"{param}_anomaly_pred"],
         )
         recall = recall_score(
             df.loc[test_data.index, f"{param}_anomaly"],
-            df.loc[test_data.index, f"{param}_is_anomaly"],
+            df.loc[test_data.index, f"{param}_anomaly_pred"],
         )
         print(
             f"{param} -> Accuracy: {accuracy:.3f}, Precision: {precision:.3f}, Recall: {recall:.3f}"
@@ -83,7 +83,7 @@ def isolationForest(
         print(
             classification_report(
                 df.loc[test_data.index, f"{param}_anomaly"],
-                df.loc[test_data.index, f"{param}_is_anomaly"],
+                df.loc[test_data.index, f"{param}_anomaly_pred"],
             )
         )
 
