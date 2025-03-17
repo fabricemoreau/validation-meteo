@@ -176,7 +176,7 @@ def train(
             / SUBPATHS.REPORTS.value
             / SUBPATHS.FIGURES.value
         )
-        save_results_to_word(df, parameters, filename=reportPath, imagesdir=imagesDir)
+        save_results_to_word(df, parameters, modelname, filename=reportPath, imagesdir=imagesDir)
 
 
 @meteo_models.command()
@@ -204,7 +204,7 @@ def check(
     print(df.head())
     # Take only the parameters that have been trained/tested
     parameters = [
-        string.split("_")[0] for string in df.columns if "is_anomaly" in string
+        string.split("_")[0] for string in df.columns if "_anomaly_pred" in string
     ]
     if savereport:
         modelname = resultsdatabasefilepath.name.split("_")[0]
@@ -218,7 +218,7 @@ def check(
             / SUBPATHS.REPORTS.value
             / SUBPATHS.FIGURES.value
         )
-        save_results_to_word(df, parameters, filename=reportPath, imagesdir=imagesDir)
+        save_results_to_word(df, parameters, modelname, filename=reportPath, imagesdir=imagesDir)
     else:
         for param in parameters:
             plot_anomalies(param, df, mode=mode)
