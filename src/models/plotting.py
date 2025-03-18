@@ -12,7 +12,7 @@ class PlotMode(Enum):
 
 # Function to plot anomalies with Plotly
 def plot_anomalies(
-    parameter: list,
+    parameter: str,
     df: pd.DataFrame,
     tn_sample_fraction: float = 0.1,
     mode: PlotMode = PlotMode.TEMPORAL,
@@ -29,7 +29,7 @@ def plot_anomalies(
     - Blue points representing normal values.
     - Green points representing real anomalies (human corrections).
     - Red points representing predicted anomalies (detected by Isolation Forest).
-    """
+    """    
     test_data = df[df["is_test"] == 1]
     test_data["anomaly_type"] = test_data.apply(
         lambda row: "TP"
@@ -47,6 +47,7 @@ def plot_anomalies(
     )
     other_data = test_data[test_data["anomaly_type"] != "TN"]
     sampled_data = pd.concat([tn_data, other_data])
+    
     if mode in [PlotMode.BOTH, PlotMode.TEMPORAL]:
         fig = px.scatter(
             sampled_data,
@@ -74,7 +75,7 @@ def plot_anomalies(
             ),
         )
         if save_path is not None:
-            fig.write_image(save_path)
+            fig.write_image(str(save_path).replace('anomaly_plot', 'anomaly_plot_temporal'))
         else:
             fig.show()
     if mode in [PlotMode.BOTH, PlotMode.SPATIAL]:
@@ -103,10 +104,10 @@ def plot_anomalies(
             hover_data=["Altitude", parameter],
         )
         fig.update_yaxes(scaleanchor="x", scaleratio=1)
-        if save_path is not None:
-            fig.write_image(save_path)
-        else:
-            fig.show()
+    if save_path is not None:
+        fig.write_image(str(save_path).replace('anomaly_plot', 'anomaly_plot_spatial'))
+    else:
+        fig.show()
 
 
 # Function to save results to a Word document
@@ -167,6 +168,6 @@ def save_results_to_word(df, parameters, modelname, filename="Anomaly_Report.doc
             for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
         ) else PlotMode.TEMPORAL
         plot_anomalies(param, df, save_path=plot_filename, mode=plotMode)
-        doc.add_picture(str(plot_filename))
+        #doc.add_picture(str(plot_filename)) # need to adapt to plot_filename renamed
     
     doc.save(filename)
