@@ -22,16 +22,18 @@ def train(
     parameters: list of parameters to consider, (typically 'ETP', 'GLOT', 'RR', 'TN', 'TX')
     random_state: to set random_state of sklearn functions (for reproducibility)
     """
+    # Split data into train and test sets
+    train_data, test_data = train_test_split(
+        df, test_size=0.2, random_state=random_state
+    )
+    df.loc[test_data.index, "is_test"] = 1  # Mark test rows
+    
     for param in tqdm(parameters, desc="Training Isolation Forests"):
         print("training", param)
         features = [f"{param}_origine", "month_sin", "month_cos"]
         if spatial_info:
             features.append("cluster")
-        # Split data into train and test sets
-        train_data, test_data = train_test_split(
-            df, test_size=0.2, random_state=random_state
-        )
-        df.loc[test_data.index, "is_test"] = 1  # Mark test rows
+
         # Get anomalies proportion for contamination
         anomalies_proportion = df[f"{param}_anomaly"].sum() / df.shape[0]
 
