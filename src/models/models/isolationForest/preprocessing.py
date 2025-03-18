@@ -59,7 +59,7 @@ def preprocessing_df(df: pd.DataFrame, parameters: list):
     Pre-process the dataset before training.
 
     Parameters:
-    df : DataFrame with the meteorological data
+    df : DataFrame with the meteorological data (meteo_pivot_cleaned_2010-2024.csv)
     parameters : list of parameters to consider, (typically 'ETP', 'GLOT', 'RR', 'TN', 'TX')
     """
     # Initialize test set marker

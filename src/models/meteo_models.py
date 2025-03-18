@@ -15,7 +15,8 @@ from plotting import plot_anomalies, PlotMode, save_results_to_word
 list_models = []
 for importer, modname, ispkg in iter_modules(models.__path__):
     if ispkg:
-       list_models.append(modname)
+        list_models.append(modname)
+
 
 class SUBPATHS(Enum):
     """
@@ -73,7 +74,11 @@ def prepare(
                 print(f"create {path} directory")
                 os.makedirs(path)
         else:
-            path = databasefilepath.parents[1] / SUBPATHS.REPORTS.value / SUBPATHS.FIGURES.value
+            path = (
+                databasefilepath.parents[1]
+                / SUBPATHS.REPORTS.value
+                / SUBPATHS.FIGURES.value
+            )
             if not os.path.exists(path):
                 print(f"create {path} directory")
                 os.makedirs(path)
@@ -81,21 +86,23 @@ def prepare(
     # import module
     try:
         print(f"Lazy loading {modelname} train module")
-        preprocessing_module = __import__(f"models.{modelname}.preprocessing" , fromlist = 'preprocessing')
+        preprocessing_module = __import__(
+            f"models.{modelname}.preprocessing", fromlist="preprocessing"
+        )
     except ModuleNotFoundError:
         print("No preprocessing for {modelname}")
     else:
         print("reading:", databasefilepath)
         df = pd.read_csv(databasefilepath, sep=";", parse_dates=["datemesure"])
         print(df.head())
-        
+
         stationspath = (
-                    databasefilepath.parents[1]
-                    / SUBPATHS.DATA_RAW.value
-                    / "stationsmeteo.csv"
-                )
-        
-        df = preprocessing_module.preprocessing(df, stationspath, parameters, joinspatial, random_state)
+            databasefilepath.parents[1] / SUBPATHS.DATA_RAW.value / "stationsmeteo.csv"
+        )
+
+        df = preprocessing_module.preprocessing(
+            df, stationspath, parameters, joinspatial, random_state
+        )
 
         preprocessedDatabaseFilePath = (
             databasefilepath.parents[1]
@@ -139,6 +146,10 @@ def train(
     savereport: Annotated[
         bool, typer.Option(help="Save report with results in data/reports")
     ] = False,
+    log: Annotated[
+        bool,
+        typer.Option(help="Save training to log file in data/testModelResults"),
+    ] = True,
     random_state: Annotated[
         int, typer.Option(help="Set the random_state for reproducibility")
     ] = None,
@@ -152,43 +163,38 @@ def train(
     """
     # import module
     print(f"Lazy loading {modelname} train module")
-    train_module = __import__(f"models.{modelname}.train" , fromlist = 'train')
-    
+    train_module = __import__(f"models.{modelname}.train", fromlist="train")
+
     resultsDatabaseFilePath = (
         databasefilepath.parents[1]
         / SUBPATHS.MODEL_RESULTS.value
         / f"{modelname}_{'-'.join(parameters)}_{joinspatial}_anomaly_results.csv"
     )
+    if log:
+        logFilePath = (
+            databasefilepath.parents[1]
+            / SUBPATHS.MODEL_RESULTS.value
+            / f"{modelname}_{'-'.join(parameters)}_{joinspatial}_log.txt"
+        )
+    else:
+        logFilePath = None
 
     print("reading:", databasefilepath)
     df = pd.read_csv(databasefilepath, sep=";", parse_dates=["datemesure"])
     print(df.head())
-
-    # Check if the df has been already preprocessed
-    if not all(f"{param}_anomaly" in df.columns for param in parameters):
-        raise Exception(
-            "Columns  '<param>_anomaly' missing in the database, please input a file built with command 'prepare'"
-        )
-    if joinspatial:
-        # Check if df has been already preprocessed with spatial data
-        if not all(
-            spatialcolumn in df.columns
-            for spatialcolumn in ["Lambert93x", "Lambert93y", "Altitude", "cluster"]
-        ):
-            raise Exception(
-                "Spatial Columns missing in the database, please input a file built with command 'prepare'"
-            )
-    print(df.head())
     print(df.info())
 
-    df = train_module.train(df, parameters, joinspatial, random_state=random_state)
+    df = train_module.train(
+        df, parameters, joinspatial, log_file=logFilePath, random_state=random_state
+    )
     # keep only test data
     df = df[df.is_test == 1]
     # print(df)
     print("save to:", resultsDatabaseFilePath)
     df.to_csv(resultsDatabaseFilePath, index=False)
     if checkafter:
-        check(resultsDatabaseFilePath, savereport = savereport)
+        check(resultsDatabaseFilePath, savereport=savereport)
+
 
 @meteo_models.command()
 def check(
@@ -211,7 +217,7 @@ def check(
     resultsdatabasefilepath: path of the results database
     """
     print("reading", resultsdatabasefilepath)
-    df = pd.read_csv(resultsdatabasefilepath, parse_dates=['datemesure'])
+    df = pd.read_csv(resultsdatabasefilepath, parse_dates=["datemesure"])
     print(df.head())
     # Take only the parameters that have been trained/tested
     parameters = [
