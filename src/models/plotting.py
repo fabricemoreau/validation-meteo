@@ -90,8 +90,8 @@ def plot_anomalies(
         # )  # Adjust marker size & transparency
         fig = px.scatter(
             sampled_data,
-            x="Longitude",
-            y="Latitude",
+            x="Lambert93x",
+            y="Lambert93y",
             color="anomaly_type",
             color_discrete_map={
                 "TN": "blue",
@@ -165,7 +165,7 @@ def save_results_to_word(df, parameters, modelname, filename="Anomaly_Report.doc
         plot_filename = f"{modelname}_{param}_anomaly_plot.png" if imagesdir is None else Path(imagesdir /  f"{modelname}_{param}_anomaly_plot.png")
         plotMode = PlotMode.BOTH if all(
             spatialcolumn in df.columns
-            for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
+            for spatialcolumn in ["Lambert93x", "Lambert93y", "Altitude", "cluster"]
         ) else PlotMode.TEMPORAL
         plot_anomalies(param, df, save_path=plot_filename, mode=plotMode)
         #doc.add_picture(str(plot_filename)) # need to adapt to plot_filename renamed

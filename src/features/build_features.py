@@ -23,9 +23,11 @@ stationstotales = stationstotales[~stationstotales.Station.isin(station_donnees_
 # Enrichissement des dates
 meteobydate.datemesure = pd.to_datetime(meteobydate.datemesure)
 meteobydate['jourjulien'] = meteobydate.datemesure.dt.dayofyear
-meteobydate['mois'] = meteobydate.datemesure.dt.month
+#meteobydate['mois'] = meteobydate.datemesure.dt.month
 # saison simplifiée: hiver = janvier, février, mars...
-meteobydate['saison'] = (meteobydate['mois'] - 1) // 3
+#meteobydate['saison'] = (meteobydate['mois'] - 1) // 3
+meteobydate["month_sin"] = np.sin(2 * np.pi * meteobydate.datemesure.dt.month / 12)
+meteobydate["month_cos"] = np.cos(2 * np.pi * meteobydate.datemesure.dt.month / 12)
 
 ## ajout de la colonne anomalie, on complète les données d'origine identiques aux données corrigées
 for param in parametres:
