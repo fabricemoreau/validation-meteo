@@ -35,7 +35,7 @@ def train(
     col_to_keep.extend(
         ["Altitude", "Lambert93x", "Lambert93y", "month_sin", "month_cos"]
     )
-    y_total = (df.anomalie > 1).astype(int)
+    y_total = (df.anomaly > 1).astype(int)
 
     X = df[col_to_keep]
     y = y_total
@@ -48,11 +48,11 @@ def train(
 
     # recherche sur quelques combinaisons d'hyperparamètres
     param_model = {
-        "eps": [0.6, 0.7, 0.8],
-        "min_samples": [6, 5, 4],
-        "metric": ["euclidean"],
+        "eps": [0.5, 0.6, 0.7],
+        "min_samples": [20, 10, 5],
+        "metric": ["euclidean", "minkowski"],
     }
-    param_model = {"eps": [0.6], "min_samples": [6]}
+    #param_model = {"eps": [0.6], "min_samples": [6]}
 
     param_grid = ParameterGrid(param_model)
     accuracy = np.empty(len(param_grid))
@@ -63,7 +63,7 @@ def train(
     y_pred_best = 0
     for i in range(0, len(param_grid)):
         print(param_grid[i])
-        model = DBSCAN(**(param_grid[i]), n_jobs=-1)
+        model = DBSCAN(**(param_grid[i]), p = 4, n_jobs=-1)
         model.fit(X_norm.values)
         y_pred = model.labels_  # algorithme de clustering
         y_pred[y_pred >= 1] = 0
@@ -112,7 +112,6 @@ def train(
     df["anomaly_pred"] = y_pred_best
     # on reporte les anomalies à tous les paramètres
     for param in parameters:
-        df[param + '_anomaly'] = df[param + '_anomalie'] # a améliorer
         df[param + '_anomaly_pred'] = y_pred_best
     return df
 

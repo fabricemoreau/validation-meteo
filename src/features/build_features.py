@@ -29,28 +29,46 @@ meteobydate['jourjulien'] = meteobydate.datemesure.dt.dayofyear
 meteobydate["month_sin"] = np.sin(2 * np.pi * meteobydate.datemesure.dt.month / 12)
 meteobydate["month_cos"] = np.cos(2 * np.pi * meteobydate.datemesure.dt.month / 12)
 
+# Compute standard deviation-based thresholds for each parameter
+std_threshold = {
+    param: meteobydate[f"{param}_origine"].std() * 0.1 for param in parametres
+}  # 10% of std deviation
+
+
 ## ajout de la colonne anomalie, on complète les données d'origine identiques aux données corrigées
+# on ignore les différences de moins de 10% de l'écart-type
+
 for param in parametres:
     meteobydate[param + '_difference'] = (meteobydate[param + '_origine'] - meteobydate[param])
-    meteobydate[param + '_anomalie'] = (np.abs(meteobydate[param + '_difference']) > 0).astype(int)
+    meteobydate[param + '_anomaly'] = (np.abs(meteobydate[param + '_difference']) > std_threshold[param]).astype(int)
     # on complète les na valeur d'origine par valeur validée seulement quand pas d'anomalie
-    meteobydate.loc[meteobydate[param + '_anomalie'] == 0, param + '_origine'] = meteobydate.loc[meteobydate[param + '_anomalie'] == 0, param]
+    meteobydate.loc[meteobydate[param + '_anomaly'] == 0, param + '_origine'] = meteobydate.loc[meteobydate[param + '_anomaly'] == 0, param]
     # si "_origine" est à na, il y a une anomalie même si on ne connait pas la valeur d'origine, mais on laisse à na la valeur d'origine
-    meteobydate.loc[meteobydate[param + '_origine'].isna(), param + '_anomalie'] = 1
+    meteobydate.loc[meteobydate[param + '_origine'].isna(), param + '_anomaly'] = 1
+    
+    anomaliesProportion = meteobydate[f"{param}_anomaly"].sum() / meteobydate.shape[0]
+    print(f"{param} anomalies percentage: {anomaliesProportion * 100:.3}")
+
     
 # au moins une anomalie sur la ligne
-meteobydate['anomalie'] = meteobydate[[s + '_anomalie' for s in parametres]].sum(axis = 1)
+meteobydate['anomaly'] = meteobydate[[s + '_anomaly' for s in parametres]].sum(axis = 1)
+
+## nettoyage: on retire les colonnes "_anomalie"
 
 # classification des pluies
 #meteobydate['pluiepresente'] = (meteobydate.RR > 0)
 #meteobydate['pluiepresente_origine'] = (meteobydate.RR_origine > 0)
 # on pourrait classifier par quantiles, mais on construit des classes par rapport à l'usage de la donnée et 
+
+# commenté car pas utilisé
+"""
 pluie_intervalles = pd.IntervalIndex.from_tuples([(-1, 0), (0, 0.5), (0.5, 5), (5, 15), (15, 50), (50, 500)], 
                                                  name = ['paspluie', 'tresfaible', 'faible', 'moyen', 'fort', 'extreme'])
 meteobydate['pluieclassif'] = pd.cut(meteobydate.RR, pluie_intervalles)
 meteobydate['pluieclassif'] = meteobydate.pluieclassif.cat.rename_categories(pluie_intervalles.name)
 meteobydate['pluieclassif_origine'] = pd.cut(meteobydate.RR_origine, pluie_intervalles)
 meteobydate['pluieclassif_origine'] = meteobydate.pluieclassif_origine.cat.rename_categories(pluie_intervalles.name)
+"""
 
 meteobydate = meteobydate.merge(stationstotales[['Station', 'Altitude', 'Lambert93x', 'Lambert93y']], left_on = 'codearvalis', right_on = "Station").drop(columns = 'Station')
 
