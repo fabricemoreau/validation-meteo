@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, PosixPath
 
 import numpy as np
 import pandas as pd
@@ -6,7 +6,7 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-from plotting import plot_clusters_3d, plot_elbow_and_silhouette
+from .plotting import plot_clusters_3d, plot_elbow_and_silhouette
 
 
 def join_spatial_info(
@@ -54,7 +54,7 @@ def join_spatial_info(
     return df
 
 
-def preprocessing(df: pd.DataFrame, parameters: list):
+def preprocessing_df(df: pd.DataFrame, parameters: list):
     """
     Pre-process the dataset before training.
 
@@ -91,4 +91,33 @@ def preprocessing(df: pd.DataFrame, parameters: list):
         anomaliesProportion = df[f"{param}_anomaly"].sum() / df.shape[0]
         print(f"{param} anomalies percentage: {anomaliesProportion * 100:.3}")
 
+    return df
+
+
+def preprocessing(
+    df: pd.DataFrame,
+    stationsmeteopath: PosixPath,
+    parameters: list,
+    joinspatial: bool,
+    random_state: int = None,
+):
+    """
+    Main function to call for preprocessing
+    Parameters:
+    df : DataFrame with the meteorological data
+    stationsmeteopath:
+    parameters : list of parameters to consider, (typically 'ETP', 'GLOT', 'RR', 'TN', 'TX')
+    joinsspatial: Join also the spatial information
+    random_state:
+    """
+    # Check if the df has been already preprocessed
+    if not all(f"{param}_anomaly" in df.columns for param in parameters):
+        df = preprocessing_df(df, parameters)
+    if joinspatial:
+        # Check if df has been already preprocessed with spatial data
+        if not all(
+            spatialcolumn in df.columns
+            for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
+        ):
+            df = join_spatial_info(df, stationsmeteopath, random_state=random_state)
     return df

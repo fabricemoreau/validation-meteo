@@ -1,17 +1,22 @@
-from inspect import getmembers, isfunction
+from pkgutil import iter_modules
 from pathlib import Path
 from enum import Enum
 
 import os
 import pandas as pd
-import train_model
+import models as models
 import typer
 from typing import List, Optional
 from typing_extensions import Annotated
 
 from plotting import plot_anomalies, PlotMode, save_results_to_word
-from preprocessing import join_spatial_info, preprocessing
 
+# list of models
+list_models = []
+for importer, modname, ispkg in iter_modules(models.__path__):
+    if ispkg:
+       list_models.append(modname)
+print(list_models)
 
 class SUBPATHS(Enum):
     """
@@ -33,7 +38,7 @@ def prepare(
     modelname: Annotated[
         str,
         typer.Argument(
-            help=f"Name of the model to test, available models: {[name for name, obj in getmembers(train_model) if isfunction(obj) and obj.__module__ == 'train_model']}"
+            help=f"Name of the model to test, available models: {list_models}"
         ),
     ],
     databasefilepath: Annotated[
@@ -74,36 +79,36 @@ def prepare(
                 print(f"create {path} directory")
                 os.makedirs(path)
 
-    print("reading:", databasefilepath)
-    df = pd.read_csv(databasefilepath, sep=";", parse_dates=["datemesure"])
-    print(df.head())
+    # import module
+    try:
+        print(f"Lazy loading {modelname} train module")
+        preprocessing_module = __import__(f"models.{modelname}.preprocessing" , fromlist = 'preprocessing')
+    except ModuleNotFoundError:
+        print("No preprocessing for {modelname}")
+    else:
+        print("reading:", databasefilepath)
+        df = pd.read_csv(databasefilepath, sep=";", parse_dates=["datemesure"])
+        print(df.head())
+        
+        stationspath = (
+                    databasefilepath.parents[1]
+                    / SUBPATHS.DATA_RAW.value
+                    / "stationsmeteo.csv"
+                )
+        
+        df = preprocessing_module.preprocessing(df, stationspath, parameters, joinspatial, random_state)
 
-    # Check if the df has been already preprocessed
-    if not all(f"{param}_anomaly" in df.columns for param in parameters):
-        df = preprocessing(df, parameters)
-    if joinspatial:
-        # Check if df has been already preprocessed with spatial data
-        if not all(
-            spatialcolumn in df.columns
-            for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
-        ):
-            stationspath = (
-                databasefilepath.parents[1]
-                / SUBPATHS.DATA_RAW.value
-                / "stationsmeteo.csv"
-            )
-            df = join_spatial_info(df, stationspath, random_state=random_state)
-    preprocessedDatabaseFilePath = (
-        databasefilepath.parents[1]
-        / SUBPATHS.DATA_PREPROCESSED.value
-        / f"meteo_pivot_{'-'.join(parameters)}_{joinspatial}.csv"
-    )
-    print("save to:", preprocessedDatabaseFilePath)
-    df.to_csv(
-        preprocessedDatabaseFilePath,
-        index=False,
-        sep=";",
-    )
+        preprocessedDatabaseFilePath = (
+            databasefilepath.parents[1]
+            / SUBPATHS.DATA_PREPROCESSED.value
+            / f"meteo_pivot_{'-'.join(parameters)}_{joinspatial}.csv"
+        )
+        print("save to:", preprocessedDatabaseFilePath)
+        df.to_csv(
+            preprocessedDatabaseFilePath,
+            index=False,
+            sep=";",
+        )
 
 
 @meteo_models.command()
@@ -111,7 +116,7 @@ def train(
     modelname: Annotated[
         str,
         typer.Argument(
-            help=f"Name of the model to test, available models: {[name for name, obj in getmembers(train_model) if isfunction(obj) and obj.__module__ == 'train_model']}"
+            help=f"Name of the model to test, available models: {list_models}"
         ),
     ],
     databasefilepath: Annotated[
@@ -146,6 +151,10 @@ def train(
     databasefilepath: path of the database
     modelname: string containing the function name for the model, for example isolationForest, available functions are in train_model.py
     """
+    # import module
+    print(f"Lazy loading {modelname} train module")
+    train_module = __import__(f"models.{modelname}.train" , fromlist = 'train')
+    
     resultsDatabaseFilePath = (
         databasefilepath.parents[1]
         / SUBPATHS.MODEL_RESULTS.value
@@ -172,8 +181,10 @@ def train(
             )
     print(df.head())
     print(df.info())
-    model = getattr(train_model, modelname)
-    model(df, parameters, joinspatial, random_state=random_state)
+
+    df = train_module.train(df, parameters, joinspatial, random_state=random_state)
+    # keep only test data
+    df = df[df.is_test == 1]
     # print(df)
     print("save to:", resultsDatabaseFilePath)
     df.to_csv(resultsDatabaseFilePath, index=False)
@@ -216,7 +227,7 @@ def check(
     resultsdatabasefilepath: path of the results database
     """
     print("reading", resultsdatabasefilepath)
-    df = pd.read_csv(resultsdatabasefilepath)
+    df = pd.read_csv(resultsdatabasefilepath, parse_dates=['datemesure'])
     print(df.head())
     # Take only the parameters that have been trained/tested
     parameters = [

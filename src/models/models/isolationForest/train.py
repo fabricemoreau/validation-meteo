@@ -11,7 +11,7 @@ from sklearn.metrics import (
 from tqdm import tqdm
 
 
-def isolationForest(
+def train(
     df: pd.DataFrame, parameters: list, spatial_info: bool = False, random_state=None
 ):
     """
