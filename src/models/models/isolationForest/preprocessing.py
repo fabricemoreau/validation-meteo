@@ -53,40 +53,6 @@ def join_spatial_info(
     )
     return df
 
-
-def preprocessing_df(df: pd.DataFrame, parameters: list):
-    """
-    Pre-process the dataset before training.
-
-    Parameters:
-    df : DataFrame with the meteorological data (meteo_pivot_cleaned_2010-2024.csv)
-    parameters : list of parameters to consider, (typically 'ETP', 'GLOT', 'RR', 'TN', 'TX')
-    """
-    # Initialize test set marker
-    df["is_test"] = 0
-
-    # Create separate anomaly columns based on human corrections, using a dynamic threshold
-    # TODO: get out this function
-    def detect_real_anomaly(row, param, std_threshold):
-        threshold = std_threshold[param]  # Use parameter-specific threshold
-        return 1 if abs(row[param] - row[f"{param}_origine"]) > threshold else 0
-
-    # Compute standard deviation-based thresholds for each parameter
-    std_threshold = {
-        param: df[f"{param}_origine"].std() * 0.1 for param in parameters
-    }  # 10% of std deviation
-
-    for param in tqdm(parameters, desc="Preprocessing, finding real anomalies"):
-        tqdm.pandas(desc=f"{param} anomalies")
-        df[f"{param}_anomaly"] = df.progress_apply(
-            lambda row: detect_real_anomaly(row, param, std_threshold), axis=1
-        )
-        anomaliesProportion = df[f"{param}_anomaly"].sum() / df.shape[0]
-        print(f"{param} anomalies percentage: {anomaliesProportion * 100:.3}")
-
-    return df
-
-
 def preprocessing(
     df: pd.DataFrame,
     stationsmeteopath: PosixPath,
@@ -103,9 +69,6 @@ def preprocessing(
     joinsspatial: Join also the spatial information
     random_state:
     """
-    # Check if the df has been already preprocessed
-    if not all(f"{param}_anomaly" in df.columns for param in parameters):
-        df = preprocessing_df(df, parameters)
     if joinspatial:
         # Check if df has been already preprocessed with spatial data
         if not all(
