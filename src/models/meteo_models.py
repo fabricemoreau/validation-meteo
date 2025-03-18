@@ -188,22 +188,7 @@ def train(
     print("save to:", resultsDatabaseFilePath)
     df.to_csv(resultsDatabaseFilePath, index=False)
     if checkafter:
-        check(resultsDatabaseFilePath)
-    if savereport:
-        reportPath = (
-            databasefilepath.parents[1]
-            / SUBPATHS.REPORTS.value
-            / f"{modelname}_{'-'.join(parameters)}_{joinspatial}_anomaly_results.doc"
-        )
-        imagesDir = (
-            databasefilepath.parents[1]
-            / SUBPATHS.REPORTS.value
-            / SUBPATHS.FIGURES.value
-        )
-        save_results_to_word(
-            df, parameters, modelname, filename=reportPath, imagesdir=imagesDir
-        )
-
+        check(resultsDatabaseFilePath, savereport = savereport)
 
 @meteo_models.command()
 def check(
