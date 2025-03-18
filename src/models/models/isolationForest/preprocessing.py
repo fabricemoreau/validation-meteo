@@ -22,13 +22,13 @@ def join_spatial_info(
     print(f"reading spatial data from {spatial_data_path}")
     stations_df = pd.read_csv(spatial_data_path, sep=";")
     print(stations_df.head())
-    # Normalize Latitude, Longitude, and Altitude before clustering
+    # Normalize Lambert93x, Lambert93y, and Altitude before clustering
     scaler = StandardScaler()
     stations_df_pos_normalized = scaler.fit_transform(
-        stations_df[["Latitude", "Longitude", "Altitude"]]
+        stations_df[["Lambert93x", "Lambert93y", "Altitude"]]
     )
 
-    # Cluster stations using Latitude, Longitude, and Altitude
+    # Cluster stations using Lambert93x, Lambert93y, and Altitude
     if plots:
         plot_elbow_and_silhouette(stations_df_pos_normalized, 20)
 
@@ -40,11 +40,11 @@ def join_spatial_info(
     # drop columns before merge to avoid duplicated
     df = (
         df.drop(
-            columns=["Station", "Latitude", "Longitude", "Altitude", "cluster"],
+            columns=["Station", "Lambert93x", "Lambert93y", "Altitude", "cluster"],
             errors="ignore",
         )
         .merge(
-            stations_df[["Station", "Latitude", "Longitude", "Altitude", "cluster"]],
+            stations_df[["Station", "Lambert93x", "Lambert93y", "Altitude", "cluster"]],
             left_on="codearvalis",
             right_on="Station",
             how="left",
@@ -62,13 +62,6 @@ def preprocessing_df(df: pd.DataFrame, parameters: list):
     df : DataFrame with the meteorological data
     parameters : list of parameters to consider, (typically 'ETP', 'GLOT', 'RR', 'TN', 'TX')
     """
-
-    # Extract date-based features
-    df["month"] = df["datemesure"].dt.month
-    # Encode cyclic nature of months
-    df["month_sin"] = np.sin(2 * np.pi * df["month"] / 12)
-    df["month_cos"] = np.cos(2 * np.pi * df["month"] / 12)
-
     # Initialize test set marker
     df["is_test"] = 0
 
@@ -117,7 +110,7 @@ def preprocessing(
         # Check if df has been already preprocessed with spatial data
         if not all(
             spatialcolumn in df.columns
-            for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
+            for spatialcolumn in ["Lambert93x", "Lambert93y", "Altitude", "cluster"]
         ):
             df = join_spatial_info(df, stationsmeteopath, random_state=random_state)
     return df

@@ -173,7 +173,7 @@ def train(
         # Check if df has been already preprocessed with spatial data
         if not all(
             spatialcolumn in df.columns
-            for spatialcolumn in ["Latitude", "Longitude", "Altitude", "cluster"]
+            for spatialcolumn in ["Lambert93x", "Lambert93y", "Altitude", "cluster"]
         ):
             raise Exception(
                 "Spatial Columns missing in the database, please input a file built with command 'prepare'"
