@@ -140,6 +140,15 @@ def save_results_to_word(df, parameters, modelname, filename="Anomaly_Report.doc
     doc.add_heading("Anomaly Detection Report", level=1)
     test_data = df[df["is_test"] == 1]
     
+    # global prediction analysis
+    if 'anomaly_pred' in df.columns:
+        doc.add_heading(f"Global Results", level=2)
+        cm = confusion_matrix(test_data["anomaly"], test_data["anomaly_pred"])
+        acc = accuracy_score(test_data["anomaly"], test_data["anomaly_pred"])
+        prec = precision_score(test_data["anomaly"], test_data["anomaly_pred"], zero_division=0)
+        rec = recall_score(test_data["anomaly"], test_data["anomaly_pred"], zero_division=0)
+        classif_report = classification_report(test_data["anomaly"], test_data["anomaly_pred"])
+    
     for param in parameters:
         doc.add_heading(f"Results for {param}", level=2)
         cm = confusion_matrix(test_data[f"{param}_anomaly"], test_data[f"{param}_anomaly_pred"])
