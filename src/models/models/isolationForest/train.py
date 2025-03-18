@@ -12,7 +12,11 @@ from tqdm import tqdm
 
 
 def train(
-    df: pd.DataFrame, parameters: list, spatial_info: bool = False, random_state=None
+    df: pd.DataFrame,
+    parameters: list,
+    spatial_info: bool = False,
+    log_file: str = None,
+    random_state: int =None,
 ):
     """
     Apply isolation forest algorithm on each parameter separately.
@@ -22,12 +26,27 @@ def train(
     parameters: list of parameters to consider, (typically 'ETP', 'GLOT', 'RR', 'TN', 'TX')
     random_state: to set random_state of sklearn functions (for reproducibility)
     """
+    # Check if the df has been already preprocessed
+    if not all(f"{param}_anomaly" in df.columns for param in parameters):
+        raise Exception(
+            "Columns  '<param>_anomaly' missing in the database, please input a file built with command 'prepare'"
+        )
+    if spatial_info:
+        # Check if df has been already preprocessed with spatial data
+        if not all(
+            spatialcolumn in df.columns
+            for spatialcolumn in ["Lambert93x", "Lambert93y", "Altitude", "cluster"]
+        ):
+            raise Exception(
+                "Spatial Columns missing in the database, please input a file built with command 'prepare'"
+            )
+
     # Split data into train and test sets
     train_data, test_data = train_test_split(
         df, test_size=0.2, random_state=random_state
     )
     df.loc[test_data.index, "is_test"] = 1  # Mark test rows
-    
+
     for param in tqdm(parameters, desc="Training Isolation Forests"):
         print("training", param)
         features = [f"{param}_origine", "month_sin", "month_cos"]
