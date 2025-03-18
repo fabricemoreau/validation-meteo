@@ -16,7 +16,6 @@ list_models = []
 for importer, modname, ispkg in iter_modules(models.__path__):
     if ispkg:
        list_models.append(modname)
-print(list_models)
 
 class SUBPATHS(Enum):
     """
