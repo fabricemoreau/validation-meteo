@@ -30,7 +30,7 @@ stations_split_test = 0.1
 fichier_suffixe = '-'.join(parametres) + '_' + str(np.min(train_years + test_years)) + '-' + str(np.max(train_years + test_years))
 
 parametres_feature = ['GLOT', 'TN', 'TX'] # pas RR pour l'instant['ETP', 'GLOT', 'TN', 'TX'] # pas RR pour l'instant
-meta_features = ['Altitude', 'Lambert93x', 'Lambert93y', 'month_sin', 'month_cos', 'jourjulien']
+meta_features = ['Altitude', 'Lambert93x', 'Lambert93y', 'month_sin', 'month_cos']
 for param in parametres_feature:
     if param not in parametres:
         meta_features.append(param)
@@ -40,15 +40,8 @@ parametres_origine = [ param + '_origine' for param in parametres ]
 
 meteobydate = pd.read_csv(fichier, sep = ';', parse_dates = ['datemesure'])
 
-# a déplacer en preprocessing
-meteobydate["month_sin"] = np.sin(2 * np.pi * meteobydate.datemesure.dt.month / 12)
-meteobydate["month_cos"] = np.cos(2 * np.pi * meteobydate.datemesure.dt.month / 12)
-
-meteobydate['anomalie']  = np.where(meteobydate['anomalie'] > 0, 1, 0)
-# on détermine un seuil mino d'anomalie par paramètre
-threshold = meteobydate[[param + '_origine' for param in parametres]].std() * 0.1
-for param in parametres:
-    meteobydate[param + '_anomalie_threshold'] = np.where(np.abs(meteobydate[param + '_difference']) > threshold[param + '_origine'], 1, 0)
+# fin de à déplacer en preprocessing
+meteobydate['anomaly']  = np.where(meteobydate['anomaly'] > 0, 1, 0)
 # fin de à déplacer en preprocessing
 
 val_recentes = meteobydate[~meteobydate.datemesure.dt.year.isin(train_years + test_years)]
@@ -118,6 +111,7 @@ for param in parametres:
 print(quantiles_corrections)
 # [0.031959629941127, 0.015307964473969246, 0.007352941176470562, 0.0034602076124566894]
 # sans ETP [0.018672828363058707, 0.007462686567164201, 0.0034602076124566894]
+# le 19/03/2025: [0.03700588730025231, 0.03427925000601729, 0.020220588235294046, 0.01730103806228367]
 
 ################################
 """ 
