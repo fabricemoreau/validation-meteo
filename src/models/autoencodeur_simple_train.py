@@ -67,16 +67,17 @@ model.compile(optimizer=Adam(learning_rate=1E-3), loss='mse', metrics=['mae'])
 # define model
 inputs = Input(shape=(nfeatures, ), name = 'input')
 #e = MyGaussianNoise([0.03, 0.02, 0.006, 0.003, 0, 0, 0, 0, 0, 0])(inputs) # 0.03
-e = MyGaussianNoise([0.02, 0.007, 0.003, 0, 0, 0, 0, 0, 0])(inputs) # 0.03
+#e = MyGaussianNoise([0.02, 0.007, 0.003, 0, 0, 0, 0, 0, 0])(inputs) # 0.03
+e = MyGaussianNoise([0.037, 0.034, 0.020, 0.017, 0, 0, 0, 0, 0])(inputs)
 e = Dense(nfeatures *2, name = 'encoder_l1')(e)
-#e = Dropout(rate = 0.2, name = 'drop1')(e)
+e = Dropout(rate = 0.2, name = 'drop1')(e)
 e = BatchNormalization(name = 'batchnorm1')(e)
 e = LeakyReLU(name = 'leakyrelu1')(e)
 e = Dense(nfeatures * 4, name = 'encoder2')(e)
 #e = Dropout(rate = 0.2)(e)
 e = BatchNormalization(name = 'batchnorm2')(e)
 e = LeakyReLU(name = 'leakyrelu2')(e)
-#e = Dropout(rate = 0.2)(e)
+e = Dropout(rate = 0.2)(e)
 bottleneck = Dense(nfeatures * 6, name = 'output')(e)
 #d = Dropout(rate = 0.2)(bottleneck)
 d = Dense(noutputs * 4)(bottleneck)
@@ -88,7 +89,7 @@ d = BatchNormalization()(d)
 d = LeakyReLU()(d)
 outputs = Dense(noutputs, activation='linear')(d)
 model = Model(inputs=inputs, outputs=outputs) 
-model.compile(optimizer=Adam(learning_rate=1E-3), loss='mse', metrics=['mae'])
+model.compile(optimizer=Adam(learning_rate=1E-4), loss='mse', metrics=['mae'])
 
 model.summary()
 
@@ -101,7 +102,7 @@ reduce_learning_rate = ReduceLROnPlateau(monitor = 'val_loss',
                                min_delta = 1E-5, # essayer 1E-6 au lieu de 1E-5
                                patience = 2,
                                factor = 0.1, 
-                               min_lr = 1E-6,# ajouté
+                               min_lr = 1E-7,# ajouté
                                #cooldown = 2,						
                                verbose = 1)
 checkpoint = ModelCheckpoint(path + '/autoencodeur_checkpoint_' + fichier_suffixe + '.keras', 
@@ -112,5 +113,17 @@ checkpoint = ModelCheckpoint(path + '/autoencodeur_checkpoint_' + fichier_suffix
 history = model.fit(X_train, y_train, 
                     validation_data = (X_test, y_test),
                     callbacks = [early_stopping, reduce_learning_rate, checkpoint],
-                    batch_size=128, epochs=20)
+                    batch_size=256, epochs=20)
 pd.DataFrame(history.history).to_csv(path + '/autoencodeur_history_' + fichier_suffixe + '.csv', sep = ';', index = False)
+
+# A déplacer
+import matplotlib.pyplot as plt
+plt.figure()
+plt.plot(history.history['loss'], label = 'loss')
+plt.plot(history.history['val_loss'], label = 'val_loss')
+plt.yscale("log")
+plt.legend()
+plt.ylabel("echelle logarithmique")
+plt.xlabel("Epoch")
+plt.savefig(path + '/autoencodeur_train_history_' + fichier_suffixe + '.png')
+plt.show()
