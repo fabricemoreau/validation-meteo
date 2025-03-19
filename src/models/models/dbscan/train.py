@@ -52,14 +52,16 @@ def train(
         "min_samples": [20, 10, 5],
         "metric": ["euclidean", "minkowski"],
     }
-    #param_model = {"eps": [0.6], "min_samples": [6]}
+    param_model = {"eps": [0.5, 0.45, 0.4], "min_samples": [50, 25, 15], "metric": ["euclidean"]}
 
     param_grid = ParameterGrid(param_model)
     accuracy = np.empty(len(param_grid))
+    precision = np.empty(len(param_grid))
+    recall = np.empty(len(param_grid))
     roc = np.empty(len(param_grid))
     mcc = np.empty(len(param_grid))
 
-    best_f1_score = 0
+    best_recall = 0
     y_pred_best = 0
     for i in range(0, len(param_grid)):
         print(param_grid[i])
@@ -69,6 +71,8 @@ def train(
         y_pred[y_pred >= 1] = 0
         y_pred[y_pred == -1] = 1
         accuracy[i] = accuracy_score(y, y_pred)
+        recall[i] = recall_score(y, y_pred)
+        precision[i] = precision_score(y, y_pred)
         roc[i] = roc_auc_score(y, y_pred)
         mcc[i] = matthews_corrcoef(y, y_pred)
         print(classification_report(y, y_pred))
@@ -77,7 +81,7 @@ def train(
                 y, y_pred, rownames=["Classe réelle"], colnames=["Classe prédite"]
             )
         )
-        print("recall class")
+        print("recall class", recall_score(y, y_pred))
         print("MCC Score", matthews_corrcoef(y, y_pred))
         if log_file is not None:
             f = open(log_file, "a")
@@ -99,15 +103,14 @@ def train(
             f.write("roc = " + str(roc_auc_score(y, y_pred)) + "\n")
             f.write("mcc = " + str(matthews_corrcoef(y, y_pred)) + "\n")
             f.close()
-        le_f1_score = f1_score(y, y_pred, average=None)
-        if le_f1_score[1] > best_f1_score:
+        if recall[i] > best_recall:
             y_pred_best = y_pred
 
-    print(
-        pd.DataFrame(
-            {"param": param_grid, "accuracy": accuracy, "roc": roc, "mcc": mcc}
+    recap = pd.DataFrame(
+            {"param": param_grid, "accuracy": accuracy, "recall": recall, "precision": precision, "roc": roc, "mcc": mcc}
         )
-    )
+    print(recap)
+    recap.to_csv(str(log_file).replace('.txt', '.csv'))
     df["is_test"] = 1
     df["anomaly_pred"] = y_pred_best
     # on reporte les anomalies à tous les paramètres
