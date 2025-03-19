@@ -139,6 +139,7 @@ def save_results_to_word(df, parameters, modelname, filename="Anomaly_Report.doc
     doc = Document()
     doc.add_heading("Anomaly Detection Report", level=1)
     test_data = df[df["is_test"] == 1]
+    test_data.loc[test_data.anomaly > 1, "anomaly"] = 1
     
     # global prediction analysis
     if 'anomaly_pred' in df.columns:
@@ -148,6 +149,19 @@ def save_results_to_word(df, parameters, modelname, filename="Anomaly_Report.doc
         prec = precision_score(test_data["anomaly"], test_data["anomaly_pred"], zero_division=0)
         rec = recall_score(test_data["anomaly"], test_data["anomaly_pred"], zero_division=0)
         classif_report = classification_report(test_data["anomaly"], test_data["anomaly_pred"])
+        
+        doc.add_paragraph(f"Accuracy: {acc:.3f}, Precision: {prec:.3f}, Recall: {rec:.3f}")
+        doc.add_paragraph(classif_report)
+        table = doc.add_table(rows=3, cols=3)
+        table.style = 'Table Grid'
+        table.cell(0, 1).text = 'Predicted Normal'
+        table.cell(0, 2).text = 'Predicted Anomaly'
+        table.cell(1, 0).text = 'Actual Normal'
+        table.cell(2, 0).text = 'Actual Anomaly'
+        table.cell(1, 1).text = str(cm[0, 0])
+        table.cell(1, 2).text = str(cm[0, 1])
+        table.cell(2, 1).text = str(cm[1, 0])
+        table.cell(2, 2).text = str(cm[1, 1])
     
     for param in parameters:
         doc.add_heading(f"Results for {param}", level=2)
