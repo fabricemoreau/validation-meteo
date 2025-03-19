@@ -54,7 +54,9 @@ def train(
             features.append("cluster")
 
         # Get anomalies proportion for contamination
-        anomalies_proportion = df[f"{param}_anomaly"].sum() / df.shape[0]
+        anomalies_proportion = train_data[f"{param}_anomaly"].sum() / train_data.shape[0]
+        print("anomaly proportion in train:", anomalies_proportion)
+        print("anomaly proportion in test:", test_data[f"{param}_anomaly"].sum() / test_data.shape[0])
 
         # Normalize data for better model performance
         scaler = StandardScaler()
