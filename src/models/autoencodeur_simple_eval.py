@@ -10,10 +10,10 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import plot_model
 
 
-#from layer_mygaussiannoise import MyGaussianNoise
+from src.models.layer_mygaussiannoise import MyGaussianNoise
 
 from sklearn.metrics import root_mean_squared_error
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import classification_report, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.metrics import roc_auc_score, matthews_corrcoef
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -73,22 +73,35 @@ plt.legend()
 plt.savefig(path + '/train_ae_loss_' + fichier_suffixe + '.png')
 plt.show()
 
+plt.figure(figsize=(15,15))
+for i, param in enumerate(parametres):
+    ax = plt.subplot(2, 2, i +1)
+    ax.plot(y_train[:, i], X_train_pred[:, i], '.')
+    ax.title.set_text(param)
+plt.savefig(path + '/residus_' + fichier_suffixe + '.png')
+plt.show()
+
 ### alternative: calculer erreur cumulée de chaque séquence
 # https://www.tensorflow.org/tutorials/generative/autoencoder?hl=fr
 # https://anomagram.fastforwardlabs.com/#/
 import tensorflow as tf
 train_loss = tf.keras.losses.mae(y_train, X_train_pred)
 
+# choisir un seuil
+#threshold_total = np.mean(train_loss) + np.std(train_loss)
+threshold_total = np.quantile(train_loss, 0.9) # on accepte 10% de faux positifs
+print("Threshold total: ", threshold_total)
+
 plt.figure()
 plt.hist(train_loss[None,:], bins=50)
+plt.axvline(threshold_total, ymax = 10000, linestyle = ':', color = 'red')
+plt.text(threshold_total, 10000, 'Seuil anomalie', size = 11, color = 'red')
 plt.xlabel("Train loss")
 plt.ylabel("No of examples")
 plt.legend()
 plt.savefig(path + '/train_total_loss_' + fichier_suffixe + '.png')
 plt.show()
-# choisir un seuil
-threshold_total = np.mean(train_loss) + np.std(train_loss)
-print("Threshold total: ", threshold_total)
+
 
 
 
@@ -137,9 +150,20 @@ for i, param in enumerate(parametres):
     print(pd.crosstab([False] * X_test.shape[0], anomalies[:, i].tolist()))
     
 ## anomalies from total threshold
-train_loss = tf.keras.losses.mae(y_test, X_test_pred)
+test_loss = tf.keras.losses.mae(y_test, X_test_pred)
+plt.figure()
+plt.hist(test_loss, bins=50)
+plt.axvline(threshold_total, ymax = 10000, linestyle = ':', color = 'red')
+plt.text(threshold_total, 10000, 'Seuil anomalie', size = 11, color = 'red')
+plt.xlabel("Test loss")
+plt.ylabel("No of samples")
+plt.savefig(path + '/test_total_loss_' + fichier_suffixe + '.png')
+plt.show()
+
+
+
 # test seuils
-for quant in [0.9, 0.95, 0.96, 0.97, 0.98, 0.99]:
+for quant in [0.9]: #[0.9, 0.95, 0.96, 0.97, 0.98, 0.99]:
     print("quantile", quant)
     threshold_total = np.quantile(train_loss, quant)
     anomalies_total = train_loss > threshold_total
@@ -148,53 +172,91 @@ for quant in [0.9, 0.95, 0.96, 0.97, 0.98, 0.99]:
     print(pd.crosstab([False] * X_test.shape[0], anomalies_total.numpy().tolist()))
     #print(pd.crosstab([False] * X_test.shape[0], anomalies_total.numpy().tolist()))
     
-    
+
 
 
 ##### validation
 X_val_pred = model.predict(X_val)
 val_ae_loss_param = np.abs(X_val_pred - y_val)
-for i in [1]: #np.arange(1, 0.9, -0.005): # [1]:
+for i in [0.9]: #np.arange(1, 0.895, -0.005): # [1]:
     threshold = np.quantile(train_ae_loss, i, axis = 0)
-    anomalie_val = pd.DataFrame(np.where(val_ae_loss_param > threshold, 1, 0), columns = [param + '_anomalie_pred' for param in parametres])
-    anomalie_val['anomalie_pred'] = np.where(anomalie_val[[param + '_anomalie_pred' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+    anomalie_val = pd.DataFrame(np.where(val_ae_loss_param > threshold, 1, 0), columns = [param + '_anomaly_pred' for param in parametres])
+    anomalie_val['anomaly_pred'] = np.where(anomalie_val[[param + '_anomaly_pred' for param in parametres]].sum(axis = 1) > 0, 1, 0)
     X_val_pred_unscaled = pd.DataFrame(scaler_param.inverse_transform(X_val_pred), columns = [param + '_pred' for param in parametres])
     val = pd.read_csv(path + '/val_preprocessed_' + fichier_suffixe + '.csv', sep = ';')
     val = pd.concat([val, anomalie_val, X_val_pred_unscaled], axis = 1)
-    val['anomalie_threshold'] = np.where(val[[param + '_anomalie_threshold' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+    val['anomaly'] = np.where(val[[param + '_anomaly' for param in parametres]].sum(axis = 1) > 0, 1, 0)
     print("quantile seuil:", i)
-    print(pd.crosstab(val['anomalie_threshold'], val['anomalie_pred']))
-    print(classification_report(val['anomalie_threshold'], val['anomalie_pred']))
+    print(pd.crosstab(val['anomaly'], val['anomaly_pred']))
+    print(classification_report(val['anomaly'], val['anomaly_pred']))
+    print('precision', precision_score(val['anomaly'], val['anomaly_pred'], zero_division=0))
+    print('recall', recall_score(val['anomaly'], val['anomaly_pred'], zero_division=0))
+    print(f1_score(val['anomaly'], val['anomaly_pred']))
     #val.to_csv(path + '/val_result_' + fichier_suffixe + '_' + str(i) + '.csv', sep = ';', index = False)
 
-# analyse
-FN = val.loc[(val.anomalie == 1) & (val.anomalie_pred == 0), parametres + [param +'_pred' for param in parametres] + [param + '_corrige' for param in parametres]]
-### l'autoencodeur ne prédit pas les anomalies! Il semble s'appuyer trop sur les données fournies
+# on retire toutes les anomalies plus petites que l'écart type du paramètre
+train_df = pd.read_csv(path + '/train_preprocessed_' + fichier_suffixe + '.csv', sep = ';')
+std_threshold = {
+    param: train_df[param + '_origine'].std() * 0.1 for param in parametres
+}
+#train.to_csv(path + '/train_preprocessed_' + fichier_suffixe + '.csv', sep = ';', index = False)
 
+for param in parametres:
+    print(param)
+    #print(FN[param + '_anomaly_pred'].value_counts(normalize=True))
+    # on retire des anomalies les valeur corrigées trop proches des valeurs d'origine
+    val.loc[np.abs(val[param] - val[param + '_pred']) < std_threshold[param], param + '_anomaly_pred'] = 0
+val['anomaly_pred'] = np.where(val[[param + '_anomaly' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+print(pd.crosstab(val['anomaly'], val['anomaly_pred']))
+print(classification_report(val['anomaly'], val['anomaly_pred']))
+print('precision', precision_score(val['anomaly'], val['anomaly_pred'], zero_division=0))
+print('recall', recall_score(val['anomaly'], val['anomaly_pred'], zero_division=0))
+print(f1_score(val['anomaly'], val['anomaly_pred']))
+
+val['is_test'] = 1
+
+val.rename(columns = dict(zip(parametres, [param + '_origine' for param in parametres]))).to_csv(path + '/val_result_' + fichier_suffixe + '_' + str(i) + '.csv', index = False) # sep = ';', retiré pour compatibilité avec meteo_model
+
+### l'autoencodeur ne prédit pas les anomalies! Il semble s'appuyer trop sur les données fournies
+FN = val.loc[(val.anomaly == 1) & (val.anomaly_pred == 0), parametres + [param +'_pred' for param in parametres] + [param + '_corrige' for param in parametres]]
 ## validation totale
 val_loss = tf.keras.losses.mae(y_val, X_val_pred)
 anomalie_val_total = np.where(val_loss > threshold_total, 1, 0)
 val = pd.read_csv(path + '/val_preprocessed_' + fichier_suffixe + '.csv', sep = ';')
-val['anomalie_threshold'] = np.where(val[[param + '_anomalie_threshold' for param in parametres]].sum(axis = 1) > 0, 1, 0)
-val['anomalie_pred'] = anomalie_val_total
-print(pd.crosstab(val['anomalie_threshold'], val['anomalie_pred']))
-print(classification_report(val['anomalie_threshold'], val['anomalie_pred']))
+#val['anomaly'] = np.where(val[[param + '_anomaly' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+val['anomaly_pred'] = anomalie_val_total
+print(pd.crosstab(val['anomaly'], val['anomaly_pred']))
+print(classification_report(val['anomaly'], val['anomaly_pred']))
+print('precision', precision_score(val['anomaly'], val['anomaly_pred'], zero_division=0))
+print('recall', recall_score(val['anomaly'], val['anomaly_pred'], zero_division=0))
+print(f1_score(val['anomaly'], val['anomaly_pred']))
 
 
 ##validation_recentes
-threshold = np.max(train_ae_loss, axis = 0)
+#threshold = np.max(train_ae_loss, axis = 0)
 X_val_recentes_pred = model.predict(X_val_recentes)
 val_recentes_ae_loss_param = np.abs(X_val_recentes_pred - y_val_recentes)
 
-anomalie_val_recentes = pd.DataFrame(np.where(val_recentes_ae_loss_param > threshold, 1, 0), columns = [param + '_anomalie_pred' for param in parametres])
-anomalie_val_recentes['anomalie_pred'] = np.where(anomalie_val_recentes[[param + '_anomalie_pred' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+anomalie_val_recentes = pd.DataFrame(np.where(val_recentes_ae_loss_param > threshold, 1, 0), columns = [param + '_anomaly_pred' for param in parametres])
+anomalie_val_recentes['anomaly_pred'] = np.where(anomalie_val_recentes[[param + '_anomaly_pred' for param in parametres]].sum(axis = 1) > 0, 1, 0)
 X_val_pred_recentes_unscaled = pd.DataFrame(scaler_param.inverse_transform(X_val_recentes_pred), columns = [param + '_pred' for param in parametres])
 val_recentes = pd.read_csv(path + '/val_recentes_preprocessed_' + fichier_suffixe + '.csv', sep = ';')
 val_recentes = pd.concat([val_recentes, anomalie_val_recentes, X_val_pred_recentes_unscaled], axis = 1)
-val_recentes['anomalie_threshold'] = np.where(val_recentes[[param + '_anomalie_threshold' for param in parametres]].sum(axis = 1) > 0, 1, 0)
-print(pd.crosstab(val_recentes['anomalie'], val_recentes['anomalie_pred']))
-print(classification_report(val_recentes['anomalie'], val_recentes['anomalie_pred']))
+#val_recentes['anomaly'] = np.where(val_recentes[[param + 'anomaly' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+print(pd.crosstab(val_recentes['anomaly'], val_recentes['anomaly_pred']))
+print(classification_report(val_recentes['anomaly'], val_recentes['anomaly_pred']))
 
+for param in parametres:
+    print(param)
+    #print(FN[param + '_anomaly_pred'].value_counts(normalize=True))
+    # on retire des anomalies les valeur corrigées trop proches des valeurs d'origine
+    val_recentes.loc[np.abs(val_recentes[param] - val_recentes[param + '_pred']) < std_threshold[param], param + '_anomaly_pred'] = 0
+val_recentes['anomaly_pred'] = np.where(val_recentes[[param + '_anomaly' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+print(pd.crosstab(val_recentes['anomaly'], val_recentes['anomaly_pred']))
+print(classification_report(val_recentes['anomaly'], val_recentes['anomaly_pred']))
+print('precision', precision_score(val_recentes['anomaly'], val_recentes['anomaly_pred'], zero_division=0))
+print('recall', recall_score(val_recentes['anomaly'], val_recentes['anomaly_pred'], zero_division=0))
+print(f1_score(val_recentes['anomaly'], val_recentes['anomaly_pred']))
 
 ## A continuer:
 # - normaliser avec valeurs min max par paramètre absolue: (X_test_pred_param < 0).sum(axis = 0)

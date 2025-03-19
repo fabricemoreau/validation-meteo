@@ -35,6 +35,8 @@ meteobydate["year"] = meteobydate.datemesure.dt.year
 std_threshold = {
     param: meteobydate[f"{param}_origine"].std() * SEUIL_ANOMALIE for param in parametres
 }  # 10% of std deviation
+print(std_threshold)
+#{'ETP': 0.18318447510180702, 'GLOT': 83.06429150426021, 'RR': 0.5580743138625328, 'TN': 0.6030686166367979, 'TX': 0.7995663210171116}
 
 
 ## ajout de la colonne anomalie, on complète les données d'origine identiques aux données corrigées
