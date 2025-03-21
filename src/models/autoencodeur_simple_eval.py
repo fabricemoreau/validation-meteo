@@ -206,7 +206,7 @@ for param in parametres:
     #print(FN[param + '_anomaly_pred'].value_counts(normalize=True))
     # on retire des anomalies les valeur corrigées trop proches des valeurs d'origine
     val.loc[np.abs(val[param] - val[param + '_pred']) < std_threshold[param], param + '_anomaly_pred'] = 0
-val['anomaly_pred'] = np.where(val[[param + '_anomaly' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+val['anomaly_pred'] = np.where(val[[param + '_anomaly_pred' for param in parametres]].sum(axis = 1) > 0, 1, 0)
 print(pd.crosstab(val['anomaly'], val['anomaly_pred']))
 print(classification_report(val['anomaly'], val['anomaly_pred']))
 print('precision', precision_score(val['anomaly'], val['anomaly_pred'], zero_division=0))
@@ -251,12 +251,16 @@ for param in parametres:
     #print(FN[param + '_anomaly_pred'].value_counts(normalize=True))
     # on retire des anomalies les valeur corrigées trop proches des valeurs d'origine
     val_recentes.loc[np.abs(val_recentes[param] - val_recentes[param + '_pred']) < std_threshold[param], param + '_anomaly_pred'] = 0
-val_recentes['anomaly_pred'] = np.where(val_recentes[[param + '_anomaly' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+val_recentes['anomaly_pred'] = np.where(val_recentes[[param + '_anomaly_pred' for param in parametres]].sum(axis = 1) > 0, 1, 0)
 print(pd.crosstab(val_recentes['anomaly'], val_recentes['anomaly_pred']))
 print(classification_report(val_recentes['anomaly'], val_recentes['anomaly_pred']))
 print('precision', precision_score(val_recentes['anomaly'], val_recentes['anomaly_pred'], zero_division=0))
 print('recall', recall_score(val_recentes['anomaly'], val_recentes['anomaly_pred'], zero_division=0))
 print(f1_score(val_recentes['anomaly'], val_recentes['anomaly_pred']))
+
+FN = val_recentes[(val_recentes.anomaly_pred == 0) & (val_recentes.anomaly == 1)]
+pd.DataFrame(FN.codearvalis.unique()).isin(train.codearvalis.unique())
+
 
 ## A continuer:
 # - normaliser avec valeurs min max par paramètre absolue: (X_test_pred_param < 0).sum(axis = 0)
