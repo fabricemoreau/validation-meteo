@@ -56,15 +56,15 @@ X_train = X_train[:(X_train.shape[0] // 2)]
 # define model
 #inputs_meta = Input(shape= (X_meta_train.shape[1],))
 inputs = Input(shape=(nb_jours, n_features), name = 'input')
-m = Conv1D(filters=32, kernel_size=2, strides = 2, activation='relu', padding = 'same', name = 'conv1')(inputs)
+m = Conv1D(filters=32, kernel_size=2, strides = 2, activation=LeakyReLU(), padding = 'same', name = 'conv1')(inputs)
 m = Dropout(rate = 0.2, name = 'drop1')(m)
-m = Conv1D(filters=16, kernel_size=2, strides = 2, activation='relu', padding = 'same', name  = 'conv2')(m)
+m = Conv1D(filters=16, kernel_size=2, strides = 2, activation=LeakyReLU(), padding = 'same', name  = 'conv2')(m)
 #m = Flatten()(m)
 #m = Concatenate()([m, inputs_meta])
 #m = Dense(128, activation='relu')(m)
-m = Conv1DTranspose(filters=16, kernel_size=2, strides = 2, activation='relu', padding = 'same', name = 'convtransp1')(m)
+m = Conv1DTranspose(filters=16, kernel_size=2, strides = 2, activation=LeakyReLU(), padding = 'same', name = 'convtransp1')(m)
 m = Dropout(rate = 0.2)(m)
-m = Conv1DTranspose(filters=32, kernel_size=2, strides = 2, activation='relu', padding = 'same', name = 'convtransp2')(m)
+m = Conv1DTranspose(filters=32, kernel_size=2, strides = 2, activation=LeakyReLU(), padding = 'same', name = 'convtransp2')(m)
 outputs = Conv1DTranspose(filters=4, kernel_size= 2, padding = 'same', name = 'output')(m)
 #model = Model(inputs=[inputs, inputs_meta], outputs=outputs) 
 model = Model(inputs=inputs, outputs=outputs) 
@@ -77,7 +77,7 @@ early_stopping = EarlyStopping(monitor = 'val_loss',
                            mode = 'min',
                            verbose = 1)
 reduce_learning_rate = ReduceLROnPlateau(monitor = 'val_loss',
-                               min_delta = 0.001,
+                               min_delta = 1E-4,
                                patience = 2,
                                factor = 0.1, 
                                #cooldown = 2,						
@@ -89,8 +89,9 @@ checkpoint = ModelCheckpoint(path + '/autoencodeur_checkpoint.keras',
 history = model.fit(X_train, X_train, 
                     validation_data = (X_test, X_test),
                     callbacks = [early_stopping, reduce_learning_rate, checkpoint],
-                    batch_size=32, epochs=10)
+                    batch_size=32, epochs=12)
 # {'loss': [0.0017516941297799349, 0.001152091776020825, 0.0011082716519013047, 0.0010469603585079312, 0.001044145436026156, 0.0010346017079427838], 'mae': [0.030261138454079628, 0.025109004229307175, 0.02452913299202919, 0.02371225692331791, 0.023683100938796997, 0.023556610569357872], 'val_loss': [0.007493358105421066, 0.007624099031090736, 0.007091599982231855, 0.007809476461261511, 0.008102193474769592, 0.008179611526429653], 'val_mae': [0.06855253130197525, 0.0708676353096962, 0.06901231408119202, 0.07322104275226593, 0.0748029500246048, 0.07523316890001297], 'learning_rate': [0.0010000000474974513, 0.0010000000474974513, 0.0010000000474974513, 0.00010000000474974513, 0.00010000000474974513, 1.0000000656873453e-05]}
+# 20/03/2025 : {'loss': [0.0012113122502341866, 0.0007936334004625678, 0.0007576044299639761, 0.0007099663489498198], 'mae': [0.025143010541796684, 0.02123071253299713, 0.020662758499383926, 0.01990528218448162], 'val_loss': [0.0018838632386177778, 0.0020308627281337976, 0.0020125024020671844, 0.001972724450752139], 'val_mae': [0.03317511826753616, 0.03503820300102234, 0.03424336761236191, 0.03426894545555115], 'learning_rate': [0.0010000000474974513, 0.0010000000474974513, 0.0010000000474974513, 0.00010000000474974513]}
 model = load_model(path + '/autoencodeur_checkpoint.keras')
 # prend trop de mémoire de calculer tout X_train, on prend la moitié
 X_train_pred = model.predict(X_train)
@@ -98,6 +99,8 @@ train_mae_loss = np.mean(np.abs(X_train_pred - X_train), axis=1)
 # Get reconstruction loss threshold.
 # question: faudrait-il un axis = 0?
 threshold = np.max(train_mae_loss)
+# on tente de ne retenir que l'erreur sur le jour de prédiction
+#threshold = np.max(np.abs(X_train_pred - X_train)[:,11, :])
 #0.2433545042611586
 #np.max(train_mae_loss, axis = 0)
 #array([0.2433545 , 0.19970821, 0.16277871, 0.17496798])

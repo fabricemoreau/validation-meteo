@@ -69,11 +69,7 @@ scaler = MinMaxScaler()
 meteobydate.loc[meteobydate.test == False, parametres] = scaler.fit_transform(meteobydate.loc[meteobydate.test == False, parametres])
 meteobydate.loc[meteobydate.test == True, parametres]  = scaler.transform    (meteobydate.loc[meteobydate.test == True, parametres])
 
-anomalies_true = (meteobydate[[param + '_anomalie' for param in parametres]] > 0)
-threshold = meteobydate[[param + '_origine' for param in parametres]].std() * 0.1
-
-for param in parametres:
-    meteobydate[param + '_anomalie_threshold'] = np.where(np.abs(meteobydate[param + '_difference']) > threshold[param + '_origine'], 1, 0)
+anomalies_true = (meteobydate[[param + '_anomaly' for param in parametres]] > 0)
 
 X_train = []
 X_test  = []
@@ -100,8 +96,8 @@ X_train, indexes_train = shuffle(X_train, indexes_train)
 
 
 ## meta données météos
-X_meta_train = meteobydate.loc[indexes_train, ['jourjulien', 'Altitude', 'Lambert93x', 'Lambert93y']]
-X_meta_test = meteobydate.loc[indexes_test, ['jourjulien', 'Altitude', 'Lambert93x', 'Lambert93y']]
+X_meta_train = meteobydate.loc[indexes_train, ['month_sin', 'month_cos', 'Altitude', 'Lambert93x', 'Lambert93y']]
+X_meta_test = meteobydate.loc[indexes_test, ['month_sin', 'month_cos', 'Altitude', 'Lambert93x', 'Lambert93y']]
 scaler_meta = MinMaxScaler()
 X_meta_train = scaler_meta.fit_transform(X_meta_train)
 X_meta_test  = scaler_meta.transform(X_meta_test)
@@ -117,10 +113,10 @@ y_test = np.array(y_test)
 ## jeux d'évaluation
 balanced_df_TN = meteobydate.loc[indexes_test]
 balanced_df_TN['indexes_test'] = indexes_test
-nb_anomalies_TN = (balanced_df_TN.TN_anomalie_threshold == 1).sum()
+nb_anomalies_TN = (balanced_df_TN.TN_anomaly == 1).sum()
 balanced_df_TN = pd.concat(
-    [balanced_df_TN[balanced_df_TN.TN_anomalie_threshold == 0].sample(nb_anomalies_TN),
-    balanced_df_TN[balanced_df_TN.TN_anomalie_threshold == 1]])
+    [balanced_df_TN[balanced_df_TN.TN_anomaly == 0].sample(nb_anomalies_TN),
+    balanced_df_TN[balanced_df_TN.TN_anomaly == 1]])
 
 
 
@@ -145,6 +141,6 @@ np.save(path + '/np_xtrain_meta', X_meta_train)
 np.save(path + '/np_xtest_meta', X_meta_test)
 
 col_to_save = ['test']
-col_to_save.extend(param + '_anomalie_threshold' for param in parametres)
-meteobydate[col_to_save].to_csv(path + '/pd_anomalies_threshold.csv', sep =';', index = False)
+col_to_save.extend(param + '_anomaly' for param in parametres)
+meteobydate[col_to_save].to_csv(path + '/pd_anomaly.csv', sep =';', index = False)
 balanced_df_TN.to_csv(path +  '/pd_balanced_df.csv', sep = ';', index = False)
