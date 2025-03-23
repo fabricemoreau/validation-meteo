@@ -26,8 +26,9 @@ meteobydate['jourjulien'] = meteobydate.datemesure.dt.dayofyear
 #meteobydate['mois'] = meteobydate.datemesure.dt.month
 # saison simplifiée: hiver = janvier, février, mars...
 #meteobydate['saison'] = (meteobydate['mois'] - 1) // 3
-meteobydate["month_sin"] = np.sin(2 * np.pi * meteobydate.datemesure.dt.month / 12)
-meteobydate["month_cos"] = np.cos(2 * np.pi * meteobydate.datemesure.dt.month / 12)
+meteobydate["day_sin"] = np.sin(2 * np.pi * meteobydate.datemesure.dt.day_of_year / 366)
+meteobydate["day_cos"] = np.cos(2 * np.pi * meteobydate.datemesure.dt.day_of_year / 366)
+meteobydate["year"] = meteobydate.datemesure.dt.year
 
 # Compute standard deviation-based thresholds for each parameter
 std_threshold = {
