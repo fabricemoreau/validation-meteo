@@ -1,50 +1,37 @@
 """ ACP sur les données """
-
-#%matplotlib widget
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
 periode = '2010-2024'
-fichier = './data/processed/meteo_pivot_cleaned_' + periode + '.csv'
-#fichier = './data/processed/meteo_pivot_cleaned_time_space_2010-2024.csv'
-meteobydate = pd.read_csv(fichier, sep = ';', parse_dates = True)
-meteobydate.datemesure = pd.to_datetime(meteobydate.datemesure).round('d')
+SEUIL_ANOMALIE = 0.1
+fichier = f"./data/processed/meteo_pivot_cleaned_{periode}_{SEUIL_ANOMALIE}.csv"
+meteobydate = pd.read_csv(fichier, sep = ';', parse_dates = ['datemesure'])
 meteobydate = meteobydate.dropna()
 
 parametres = ['ETP', 'GLOT', 'RR', 'TN', 'TX']
 
 
-y = meteobydate.anomalie
-anomalies = meteobydate[[s + '_anomalie' for s in parametres]]
+y = np.where(meteobydate.anomaly > 0, 1, 0)
+anomalies = meteobydate[[s + '_anomaly' for s in parametres]]
 
 col_to_keep = [s + '_origine' for s in parametres]
-#for i in range(1, 6):
-#    col_to_keep.extend([s + '_' + str(i) for s in parametres])
-col_to_keep.extend(['Altitude', 'Lambert93x', 'Lambert93y', 'datemesure', 'jourjulien', 'mois', 'saison', 'pluieclassif_origine'])
+col_to_keep.extend(['Altitude', 'Lambert93x', 'Lambert93y', 'day_cos', 'day_sin'])
 df = meteobydate[col_to_keep]
-
-pluie_enc = OneHotEncoder(sparse_output = False)
-pluies = pd.DataFrame(pluie_enc.fit_transform(df[['pluieclassif_origine']]), columns = pluie_enc.get_feature_names_out())
-df = pd.concat([df.drop(columns = 'pluieclassif_origine').reset_index(), pluies], axis = 1)
-
-
-del pluies
-del meteobydate
 
 
 sc = StandardScaler()
-df_normalise =sc.fit_transform(df.drop(columns = "datemesure"))
-df_normalise = pd.DataFrame(df_normalise, columns = df.drop(columns = "datemesure").columns)
+df_normalise =sc.fit_transform(df)
+df_normalise = pd.DataFrame(df_normalise, columns = df.columns)
 # df_normalise joue le rôle de X
 
-plt.figure(figsize = (30, 30))
+plt.figure(figsize = (15, 15))
 sns.heatmap(df_normalise.corr(), annot=True, cmap='viridis');
 plt.savefig('./reports/figures/acp_heatmap.png')
-plt.show();
+#plt.show();
 
 pca = PCA()
 Coord = pca.fit_transform(df_normalise)
@@ -54,69 +41,46 @@ plt.xlabel('Nombre de composantes')
 plt.ylabel('Part de variance expliquée')
 plt.axhline(y = 0.9, color ='r', linestyle = '--')
 plt.plot(pca.explained_variance_ratio_.cumsum())
+plt.title(f"Part de variance expliquée - seuil anomalie {SEUIL_ANOMALIE}")
 plt.savefig('./reports/figures/acp_variance_expliquee.png')
-plt.show();
-
-
-L1 = list(pca.explained_variance_ratio_[0:8])
-L1.append(sum(pca.explained_variance_ratio_[8:]))
-plt.figure()
-plt.pie(L1, labels=['PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8', 'Autres'], 
-        autopct='%1.3f%%')
-plt.savefig('./reports/figures/acp_variance_expliquee_ratio.png')
-plt.show();
-
-# graphe 2D
-fig = plt.figure(figsize = (20, 20))
-plt.scatter(data_2D[:, 0], data_2D[:, 1], c = anomalies.TX_anomalie, cmap=plt.cm.Spectral)
-plt.xlabel('PCA 1')
-plt.ylabel('PCA 2')
-plt.title("Données projetées sur les 2 axes de l'ACT : anomalies TX")
-plt.legend()
-plt.savefig('./reports/figures/acp_graphe2d_TX.png')
-plt.show();
-
+#plt.show();
 print("La part de variance expliquée est", round(pca.explained_variance_ratio_.sum(),2))
 
+L1 = list(pca.explained_variance_ratio_[0:4])
+L1.append(sum(pca.explained_variance_ratio_[4:]))
+plt.figure()
+plt.pie(L1, labels=['PC1', 'PC2', 'PC3', 'PC4', 'Autres'], 
+        autopct='%1.3f%%')
+plt.title(f"Part de variance expliquée - seuil anomalie {SEUIL_ANOMALIE}")
+plt.savefig('./reports/figures/acp_variance_expliquee_ratio.png')
+#plt.show();
 
-# graphe 2D anomalies TX
 pca = PCA(n_components = 2)
 data_2D = pca.fit_transform(df_normalise)
-fig = plt.figure(figsize = (20, 20))
-plt.scatter(data_2D[:, 0], data_2D[:, 1], c = y, cmap=plt.cm.Spectral)
+# graphe 2D
+fig = plt.figure(figsize = (10, 10))
+scatter = plt.scatter(data_2D[y == 0, 0], data_2D[y == 0, 1], c='blue', label='correcte')
+scatter = plt.scatter(data_2D[y == 1, 0], data_2D[y == 1, 1], c='red', label='anomalie')
+# Ajout des labels et du titre
 plt.xlabel('PCA 1')
 plt.ylabel('PCA 2')
-plt.title("Données projetées sur les 2 axes de l'ACT")
+plt.title(f"Données projetées sur les 2 axes de l'ACP - seuil anomalie {SEUIL_ANOMALIE}")
 plt.legend()
 plt.savefig('./reports/figures/acp_graphe2d.png')
-plt.show();
+#plt.show();
 
 
+# graphe 2D par paramètre
+for param in parametres:
+    y = meteobydate[f"{param}_anomaly"]
+    fig = plt.figure(figsize = (10, 10))
+    scatter = plt.scatter(data_2D[y == 0, 0], data_2D[y == 0, 1], c='blue', label='correcte')
+    scatter = plt.scatter(data_2D[y == 1, 0], data_2D[y == 1, 1], c='red', label='anomalie')
+    # Ajout des labels et du titre
+    plt.xlabel('PCA 1')
+    plt.ylabel('PCA 2')
+    plt.title(f"Données projetées sur les 2 axes de l'ACP pour {param} - seuil anomalie {SEUIL_ANOMALIE}")
+    plt.legend()
+    plt.savefig(f"./reports/figures/acp_graphe2d_{param}.png")
+    #plt.show();
 
-# cercle des corrélations
-racine_valeurs_propres = np.sqrt(pca.explained_variance_)
-corvar = np.zeros((30, 30))
-for k in range(30):
-    corvar[:, k] = pca.components_[:, k] * racine_valeurs_propres[k]
-
-# Délimitation de la figure
-fig, axes = plt.subplots(figsize=(10, 10))
-axes.set_xlim(-1, 1)
-axes.set_ylim(-1, 1)
-
-# Affichage des variables
-for j in range(30):
-    plt.annotate(df_normalise.columns[j], (corvar[j, 0], corvar[j, 1]), color='#091158')
-    plt.arrow(0, 0, corvar[j, 0]*0.6, corvar[j, 1]*0.6, alpha=0.5, head_width=0.03, color='b')
-
-# Ajout des axes
-plt.plot([-1, 1], [0, 0], color='silver', linestyle='-', linewidth=1)
-plt.plot([0, 0], [-1, 1], color='silver', linestyle='-', linewidth=1)
-
-# Cercle et légendes
-cercle = plt.Circle((0, 0), 1, color='#16E4CA', fill=False)
-axes.add_artist(cercle)
-plt.xlabel('AXE 1')
-plt.ylabel('AXE 2')
-plt.savefig('./reports/figures/acp_cercle.png')
-plt.show();

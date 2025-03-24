@@ -10,6 +10,7 @@ meteobydate = pd.read_csv(fichier, sep = ';', parse_dates = True)
 stationstotales = pd.read_csv('./data/raw/stationsmeteo_' + periode + '.csv', sep = ';')
 
 parametres = ['ETP', 'GLOT', 'RR', 'TN', 'TX']
+SEUIL_ANOMALIE = 0.1
 
 
 # gestion des données manquantes
@@ -32,7 +33,7 @@ meteobydate["year"] = meteobydate.datemesure.dt.year
 
 # Compute standard deviation-based thresholds for each parameter
 std_threshold = {
-    param: meteobydate[f"{param}_origine"].std() * 0.1 for param in parametres
+    param: meteobydate[f"{param}_origine"].std() * SEUIL_ANOMALIE for param in parametres
 }  # 10% of std deviation
 
 
@@ -73,4 +74,4 @@ meteobydate['pluieclassif_origine'] = meteobydate.pluieclassif_origine.cat.renam
 
 meteobydate = meteobydate.merge(stationstotales[['Station', 'Altitude', 'Lambert93x', 'Lambert93y']], left_on = 'codearvalis', right_on = "Station").drop(columns = 'Station')
 
-meteobydate.to_csv('./data/processed/meteo_pivot_cleaned_' + periode + '.csv', sep = ';', index = False)
+meteobydate.to_csv(f"./data/processed/meteo_pivot_cleaned_{periode}_{SEUIL_ANOMALIE}.csv", sep = ';', index = False)
