@@ -12,3 +12,4 @@ tqdm
 typer
 typing_extensions
 python-docx 
+streamlit
