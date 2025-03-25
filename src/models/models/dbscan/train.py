@@ -33,7 +33,7 @@ def train(
     df = df.sample(frac = 0.2, random_state = random_state)
     col_to_keep = [s + "_origine" for s in parameters]
     col_to_keep.extend(
-        ["Altitude", "Lambert93x", "Lambert93y", "month_sin", "month_cos"]
+        ["Altitude", "Lambert93x", "Lambert93y", "day_sin", "day_cos"]
     )
     y_total = (df.anomaly > 1).astype(int)
 
@@ -110,7 +110,7 @@ def train(
             {"param": param_grid, "accuracy": accuracy, "recall": recall, "precision": precision, "roc": roc, "mcc": mcc}
         )
     print(recap)
-    recap.to_csv(str(log_file).replace('.txt', '.csv'))
+    recap.to_csv(str(log_file).replace('.txt', '.csv'), sep = ';')
     df["is_test"] = 1
     df["anomaly_pred"] = y_pred_best
     # on reporte les anomalies à tous les paramètres
