@@ -42,6 +42,8 @@ y_test_recentes = X_test_recentes[:,0:noutputs]
 
 scaler_param = joblib.load(path + '/joblib_scaler_param_' + fichier_suffixe + '.gz')
 # attention à /autoencodeur_reduce_checkpoint_
+fichier_suffixe_ori = fichier_suffixe
+fichier_suffixe += '_gaussiannoise'
 model = load_model(path + '/autoencodeur_checkpoint_' + fichier_suffixe + '.keras')
 
 plot_model(model, path + '/autoencoder_schema_ ' + fichier_suffixe + '.png', show_shapes=True)
@@ -213,7 +215,10 @@ test['is_test'] = 1
 test.rename(columns = dict(zip(parametres, [param + '_origine' for param in parametres]))).to_csv(path + '/test_result_' + fichier_suffixe + '_' + str(i) + '.csv', index = False) # sep = ';', retiré pour compatibilité avec meteo_model
 
 ### l'autoencodeur ne prédit pas les anomalies! Il semble s'appuyer trop sur les données fournies
-FN = test.loc[(val.anomaly == 1) & (test.anomaly_pred == 0), parametres + [param +'_pred' for param in parametres] + [param + '_corrige' for param in parametres]]
+FN = test.loc[(test.anomaly == 1) & (test.anomaly_pred == 0), parametres + [param +'_pred' for param in parametres] + [param + '_corrige' for param in parametres]]
+
+
+"""
 ## validation totale
 test_loss = tf.keras.losses.mae(y_test, X_test_pred)
 anomalie_test_total = np.where(test_loss > threshold_total, 1, 0)
@@ -225,18 +230,36 @@ print(classification_report(test['anomaly'], test['anomaly_pred']))
 print('precision', precision_score(test['anomaly'], test['anomaly_pred'], zero_division=0))
 print('recall', recall_score(test['anomaly'], test['anomaly_pred'], zero_division=0))
 print(f1_score(test['anomaly'], test['anomaly_pred']))
-
+"""
 
 ##validation_recentes
 #threshold = np.max(train_ae_loss, axis = 0)
 X_test_recentes_pred = model.predict(X_test_recentes)
 test_recentes_ae_loss_param = np.abs(X_test_recentes_pred - y_test_recentes)
 
+for i in np.arange(1, 0.895, -0.005): # [1]:
+    threshold = np.quantile(train_ae_loss, i, axis = 0)
+    anomalie_test_recentes = pd.DataFrame(np.where(test_recentes_ae_loss_param > threshold, 1, 0), columns = [param + '_anomaly_pred' for param in parametres])
+    anomalie_test_recentes['anomaly_pred'] = np.where(anomalie_test_recentes[[param + '_anomaly_pred' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+    X_test_pred_recentes_unscaled = pd.DataFrame(scaler_param.inverse_transform(X_test_recentes_pred), columns = [param + '_pred' for param in parametres])
+    test_recentes = pd.read_csv(path + '/test_recentes_preprocessed_' + fichier_suffixe_ori + '.csv', sep = ';')
+    test_recentes = pd.concat([test_recentes, anomalie_test_recentes, X_test_pred_recentes_unscaled], axis = 1)
+    #test_recentes['anomaly'] = np.where(test_recentes[[param + 'anomaly' for param in parametres]].sum(axis = 1) > 0, 1, 0)
+    print("quantile seuil:", i)
+    print(pd.crosstab(test_recentes['anomaly'], test_recentes['anomaly_pred']))
+    print(classification_report(test_recentes['anomaly'], test_recentes['anomaly_pred']))
+
+## etude des faux négatifs: on prend le seuil à 0.95
+threshold = np.quantile(train_ae_loss, 0.95, axis = 0)
 anomalie_test_recentes = pd.DataFrame(np.where(test_recentes_ae_loss_param > threshold, 1, 0), columns = [param + '_anomaly_pred' for param in parametres])
 anomalie_test_recentes['anomaly_pred'] = np.where(anomalie_test_recentes[[param + '_anomaly_pred' for param in parametres]].sum(axis = 1) > 0, 1, 0)
 X_test_pred_recentes_unscaled = pd.DataFrame(scaler_param.inverse_transform(X_test_recentes_pred), columns = [param + '_pred' for param in parametres])
-test_recentes = pd.read_csv(path + '/test_recentes_preprocessed_' + fichier_suffixe + '.csv', sep = ';')
+test_recentes = pd.read_csv(path + '/test_recentes_preprocessed_' + fichier_suffixe_ori + '.csv', sep = ';')
 test_recentes = pd.concat([test_recentes, anomalie_test_recentes, X_test_pred_recentes_unscaled], axis = 1)
-#test_recentes['anomaly'] = np.where(test_recentes[[param + 'anomaly' for param in parametres]].sum(axis = 1) > 0, 1, 0)
-print(pd.crosstab(test_recentes['anomaly'], test_recentes['anomaly_pred']))
-print(classification_report(test_recentes['anomaly'], test_recentes['anomaly_pred']))
+
+FN = test_recentes[(test_recentes.anomaly == 1) & (test_recentes.anomaly_pred == 0)][[param + '_pred' for param in parametres] + parametres + [param + '_difference' for param in parametres]]
+FN_residus = np.abs(FN[parametres].values - FN[[param + '_pred' for param in parametres]].values)
+FN_residus = pd.DataFrame(FN_residus, columns = parametres)
+print("l'autoencodeur reproduit les anomalies!!")
+FN_residus.max()
+np.abs(FN[[param + '_difference' for param in parametres]]).max()

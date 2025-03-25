@@ -30,6 +30,8 @@ fichier_suffixe = '-'.join(parametres) + '_' + str(2010) + '-' + str(2022) + '-'
 X_train = np.load(path + '/np_xtrain_' + fichier_suffixe + '.npy')
 X_val = np.load(path + '/np_xval_' + fichier_suffixe + '.npy')
 
+fichier_suffixe = fichier_suffixe + '_gaussiannoise'
+
 nfeatures = X_train.shape[1]
 noutputs = len(parametres)
 
@@ -68,8 +70,8 @@ model.compile(optimizer=Adam(learning_rate=1E-3), loss='mse', metrics=['mae'])
 inputs = Input(shape=(nfeatures, ), name = 'input')
 #e = MyGaussianNoise([0.03, 0.02, 0.006, 0.003, 0, 0, 0, 0, 0, 0])(inputs) # 0.03
 #e = MyGaussianNoise([0.02, 0.007, 0.003, 0, 0, 0, 0, 0, 0])(inputs) # 0.03
-#e = MyGaussianNoise([0.037, 0.034, 0.020, 0.017, 0, 0, 0, 0, 0])(inputs)
-e = Dense(nfeatures *2, name = 'encoder_l1')(inputs) # (e)
+e = MyGaussianNoise([0.037, 0.034, 0.020, 0.017, 0, 0, 0, 0, 0])(inputs)
+e = Dense(nfeatures *2, name = 'encoder_l1')(e) 
 e = BatchNormalization(name = 'batchnorm1')(e)
 e = LeakyReLU(name = 'leakyrelu1')(e)
 e = Dense(nfeatures * 4, name = 'encoder2')(e)
