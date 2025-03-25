@@ -21,5 +21,5 @@ erDiagram
         float Lambert93x "positionnement Lambert93 de la station"
         float Lambert93y "positionnement Lambert93 de la station"
     }
-    "donneesmeteo_2010-2024.csv" ||--|{ "stationsmeteo.csv" : "codearvalis = Station"
+    "donneesmeteo_2010-2024.csv" }o--|| "stationsmeteo.csv" : "codearvalis = Station"
 ```

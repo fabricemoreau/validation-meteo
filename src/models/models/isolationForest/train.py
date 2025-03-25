@@ -2,6 +2,7 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import pandas as pd
+import numpy as np
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -41,44 +42,95 @@ def train(
                 "Spatial Columns missing in the database, please input a file built with command 'prepare'"
             )
 
-    # Split data into train and test sets
-    train_data, test_data = train_test_split(
-        df, test_size=0.2, random_state=random_state
-    )
-    df.loc[test_data.index, "is_test"] = 1  # Mark test rows
+    df["is_test"] = 1  # Mark test rows
+    
+    print("global isolation forest")
+    # global
+    features = [f"{param_i}_origine" for param_i in parameters]
+    features = ["day_sin", "day_cos", "Lambert93x", "Lambert93y", "Altitude"] + features
+    df["anomaly"] = np.where(df["anomaly"] > 0, 1, 0)
+    # Normalize data for better model performance
+    scaler = StandardScaler()
+    train_scaled = scaler.fit_transform(df[features])
 
+    # Train Isolation Forest model: hyperparameters set from search
+    iso_forest = IsolationForest(
+        n_estimators=100,
+        contamination=0.14,
+        max_features = 8,
+        max_samples = 0.2,
+        random_state=random_state,
+        n_jobs=-1,
+    )
+    iso_forest.fit(train_scaled)
+    # Predict on test set
+    df["anomaly_score"] = iso_forest.predict(
+        train_scaled
+    )
+
+    # Identify anomalies for the specific parameter
+    df["anomaly_pred"] = df["anomaly_score"].apply(lambda x: 1 if x == -1 else 0)
+    
+    print(
+        pd.crosstab(
+            df["anomaly"],
+            df["anomaly_pred"],
+            rownames=["real"],
+            colnames=["predicted"],
+        )
+    )
+    accuracy = accuracy_score(
+        df["anomaly"],
+        df["anomaly_pred"],
+    )
+    precision = precision_score(
+        df["anomaly"],
+        df["anomaly_pred"],
+    )
+    recall = recall_score(
+        df["anomaly"],
+        df["anomaly_pred"],
+    )
+    print(
+        f"global-> Accuracy: {accuracy:.3f}, Precision: {precision:.3f}, Recall: {recall:.3f}"
+    )
+    print(
+        classification_report(
+            df["anomaly"],
+            df["anomaly_pred"],
+        )
+    )
+
+
+    # par paramètres: pas d'hyperparamètre optimisé
     for param in tqdm(parameters, desc="Training Isolation Forests"):
         print("training", param)
-        features = [f"{param}_origine", "month_sin", "month_cos"]
+        features = [f"{param}_origine", "day_sin", "day_cos"]
         if spatial_info:
             features.append("cluster")
 
         # Get anomalies proportion for contamination
-        anomalies_proportion = train_data[f"{param}_anomaly"].sum() / train_data.shape[0]
+        anomalies_proportion = df[f"{param}_anomaly"].sum() / df.shape[0]
         print("anomaly proportion in train:", anomalies_proportion)
-        print("anomaly proportion in test:", test_data[f"{param}_anomaly"].sum() / test_data.shape[0])
 
         # Normalize data for better model performance
         scaler = StandardScaler()
-        train_scaled = scaler.fit_transform(train_data[features])
-        test_scaled = scaler.transform(test_data[features])
+        train_scaled = scaler.fit_transform(df[features])
         # Train Isolation Forest model
         iso_forest = IsolationForest(
             n_estimators=100,
-            contamination=anomalies_proportion,
+            contamination=anomalies_proportion,            
             random_state=random_state,
             n_jobs=-1,
         )
         iso_forest.fit(train_scaled)
         # Predict on test set
-        df.loc[test_data.index, f"{param}_anomaly_score"] = iso_forest.predict(
-            test_scaled
+        df[f"{param}_anomaly_score"] = iso_forest.predict(
+            train_scaled
         )
 
         # Identify anomalies for the specific parameter
-        df.loc[test_data.index, f"{param}_anomaly_pred"] = df.loc[
-            test_data.index, f"{param}_anomaly_score"
-        ].apply(lambda x: 1 if x == -1 else 0)
+        df[f"{param}_anomaly_pred"] = df[f"{param}_anomaly_score"].apply(lambda x: 1 if x == -1 else 0)
 
         print(
             pd.crosstab(
@@ -89,24 +141,24 @@ def train(
             )
         )
         accuracy = accuracy_score(
-            df.loc[test_data.index, f"{param}_anomaly"],
-            df.loc[test_data.index, f"{param}_anomaly_pred"],
+            df[f"{param}_anomaly"],
+            df[f"{param}_anomaly_pred"],
         )
         precision = precision_score(
-            df.loc[test_data.index, f"{param}_anomaly"],
-            df.loc[test_data.index, f"{param}_anomaly_pred"],
+            df[f"{param}_anomaly"],
+            df[f"{param}_anomaly_pred"],
         )
         recall = recall_score(
-            df.loc[test_data.index, f"{param}_anomaly"],
-            df.loc[test_data.index, f"{param}_anomaly_pred"],
+            df[f"{param}_anomaly"],
+            df[f"{param}_anomaly_pred"],
         )
         print(
             f"{param} -> Accuracy: {accuracy:.3f}, Precision: {precision:.3f}, Recall: {recall:.3f}"
         )
         print(
             classification_report(
-                df.loc[test_data.index, f"{param}_anomaly"],
-                df.loc[test_data.index, f"{param}_anomaly_pred"],
+                df[f"{param}_anomaly"],
+                df[f"{param}_anomaly_pred"],
             )
         )
 
