@@ -18,24 +18,24 @@ from keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 
 
-method  = 'autoencsimple'
+method  = 'autoencoder'
 path    = './data/processed/' + method
 
-parametres = ['ETP', 'GLOT', 'TN', 'TX'] #['ETP', 'GLOT', 'TN', 'TX'] 
+parametres = ['ETP', 'GLOT', 'TN', 'TX']
 
-fichier_suffixe = '-'.join(parametres) + '_' + str(2010) + '-' + str(2022)
+fichier_suffixe = '-'.join(parametres) + '_' + str(2010) + '-' + str(2022) + '-' + str(0.1)
 
 
 # les colonnes doivent être dans l'ordre: parametres + meta_features
 X_train = np.load(path + '/np_xtrain_' + fichier_suffixe + '.npy')
-X_test = np.load(path + '/np_xtest_' + fichier_suffixe + '.npy')
+X_val = np.load(path + '/np_xval_' + fichier_suffixe + '.npy')
 
 nfeatures = X_train.shape[1]
 noutputs = len(parametres)
 
 # on ne veut prédire que les paramètres, pas les meta_features
 y_train = X_train[:,0:noutputs]
-y_test = X_test[:,0:noutputs]
+y_val = X_val[:,0:noutputs]
 
 
 """
@@ -68,18 +68,14 @@ model.compile(optimizer=Adam(learning_rate=1E-3), loss='mse', metrics=['mae'])
 inputs = Input(shape=(nfeatures, ), name = 'input')
 #e = MyGaussianNoise([0.03, 0.02, 0.006, 0.003, 0, 0, 0, 0, 0, 0])(inputs) # 0.03
 #e = MyGaussianNoise([0.02, 0.007, 0.003, 0, 0, 0, 0, 0, 0])(inputs) # 0.03
-e = MyGaussianNoise([0.037, 0.034, 0.020, 0.017, 0, 0, 0, 0, 0])(inputs)
-e = Dense(nfeatures *2, name = 'encoder_l1')(e)
-e = Dropout(rate = 0.2, name = 'drop1')(e)
+#e = MyGaussianNoise([0.037, 0.034, 0.020, 0.017, 0, 0, 0, 0, 0])(inputs)
+e = Dense(nfeatures *2, name = 'encoder_l1')(inputs) # (e)
 e = BatchNormalization(name = 'batchnorm1')(e)
 e = LeakyReLU(name = 'leakyrelu1')(e)
 e = Dense(nfeatures * 4, name = 'encoder2')(e)
-#e = Dropout(rate = 0.2)(e)
 e = BatchNormalization(name = 'batchnorm2')(e)
 e = LeakyReLU(name = 'leakyrelu2')(e)
-e = Dropout(rate = 0.2)(e)
 bottleneck = Dense(nfeatures * 6, name = 'output')(e)
-#d = Dropout(rate = 0.2)(bottleneck)
 d = Dense(noutputs * 4)(bottleneck)
 d = BatchNormalization()(d)
 d = LeakyReLU()(d)
@@ -95,12 +91,12 @@ model.summary()
 
 early_stopping = EarlyStopping(monitor = 'val_loss',
                            min_delta = 1E-7,
-                           patience = 3,
+                           patience = 4,
                            mode = 'min',
                            verbose = 1)
 reduce_learning_rate = ReduceLROnPlateau(monitor = 'val_loss',
                                min_delta = 1E-5, # essayer 1E-6 au lieu de 1E-5
-                               patience = 2,
+                               patience = 3,
                                factor = 0.1, 
                                min_lr = 1E-7,# ajouté
                                #cooldown = 2,						
@@ -111,7 +107,7 @@ checkpoint = ModelCheckpoint(path + '/autoencodeur_checkpoint_' + fichier_suffix
                                 mode='min',
                                 verbose = 1)
 history = model.fit(X_train, y_train, 
-                    validation_data = (X_test, y_test),
+                    validation_data = (X_val, y_val),
                     callbacks = [early_stopping, reduce_learning_rate, checkpoint],
                     batch_size=256, epochs=20)
 pd.DataFrame(history.history).to_csv(path + '/autoencodeur_history_' + fichier_suffixe + '.csv', sep = ';', index = False)
@@ -119,11 +115,11 @@ pd.DataFrame(history.history).to_csv(path + '/autoencodeur_history_' + fichier_s
 # A déplacer
 import matplotlib.pyplot as plt
 plt.figure()
-plt.plot(history.history['loss'], label = 'loss')
-plt.plot(history.history['val_loss'], label = 'val_loss')
+plt.plot(history.history['loss'][1:], label = 'loss')
+plt.plot(history.history['val_loss'][1:], label = 'val_loss')
 plt.yscale("log")
 plt.legend()
 plt.ylabel("echelle logarithmique")
 plt.xlabel("Epoch")
 plt.savefig(path + '/autoencodeur_train_history_' + fichier_suffixe + '.png')
-plt.show()
+#plt.show()
