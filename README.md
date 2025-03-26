@@ -57,7 +57,7 @@ Help:
 python src/models/meteo_models_clustering.py --help
 ```
 
-To use a model:
+To use a clustering model:
 ```python
 # step 1: additionnal preprocessing
 python src/models/meteo_models_clustering.py prepare isolationForest data/processed/meteo_pivot_cleaned_2010-2024_0.1.csv --no-joinspatial
@@ -68,6 +68,10 @@ python src/models/meteo_models_clustering.py train model_preprocessed --no-joins
 # step 3: report
 python src/models/meteo_models_clustering.py check trained_file --no-joinspatial
 ```
+
+To use autoencoder model: 
+- adapt constants in each script on src/models/autoencodeur
+- run each script 
 
 ## Streamlit usage
 ```python
