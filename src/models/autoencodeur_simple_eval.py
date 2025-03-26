@@ -43,7 +43,7 @@ y_test_recentes = X_test_recentes[:,0:noutputs]
 scaler_param = joblib.load(path + '/joblib_scaler_param_' + fichier_suffixe + '.gz')
 # attention à /autoencodeur_reduce_checkpoint_
 fichier_suffixe_ori = fichier_suffixe
-fichier_suffixe += '_gaussiannoise'
+#fichier_suffixe += '_gaussiannoise'
 model = load_model(path + '/autoencodeur_checkpoint_' + fichier_suffixe + '.keras')
 
 plot_model(model, path + '/autoencoder_schema_ ' + fichier_suffixe + '.png', show_shapes=True)
@@ -68,11 +68,11 @@ print("seuil d'anomalie", threshold)
 plt.figure(figsize=(15, 15))
 for i, param in enumerate(parametres):
     ax = plt.subplot(2, 2, i + 1)
-    ax.hist(train_ae_loss, bins=50, label = parametres)
+    ax.hist(train_ae_loss[:,i], bins=50, label = param)
     ax.axvline(threshold[i], ymax = ax.get_ylim()[1] * 0.9, linestyle = ':', color = 'red')
     ax.text(threshold[i], ax.get_ylim()[1] * 0.9, 'Seuil anomalie max', size = 11, color = 'red')
-    ax.axvline(np.quantile(train_ae_loss, 0.9, axis = 0)[i], ymax = ax.get_ylim()[1] * 0.7, linestyle = ':', color = 'purple')
-    ax.text(np.quantile(train_ae_loss, 0.98, axis = 0)[i], ax.get_ylim()[1] * 0.7, 'Seuil anomalie décile 9', size = 11, color = 'purple')
+    ax.axvline(np.quantile(train_ae_loss[:,i], 0.9, axis = 0), ymax = ax.get_ylim()[1] * 0.7, linestyle = ':', color = 'purple')
+    ax.text(np.quantile(train_ae_loss[:,i], 0.98, axis = 0), ax.get_ylim()[1] * 0.7, 'Seuil anomalie décile 9', size = 11, color = 'purple')
     
     ax.set_xlabel("Train Absolute Error loss")
     ax.set_ylabel("No of samples")
@@ -120,35 +120,42 @@ def graph_sequence(data: np.ndarray, filename: str, data_predicted : np.ndarray 
     fig = plt.figure(figsize = (10, 10))
     for i, param in enumerate(parametres):
         ax1 = fig.add_subplot(2,2,i + 1)
-        ax1.plot(data[i], label = parametres[i] + ' observé')
+        ax1.plot(data[i], linestyle = 'dashed', marker='o', label = param + ' observé')
         if data_predicted is not None:
-            ax1.plot(data_predicted[i], linestyle = 'dashed', marker='o', label = parametres[i] + ' prédit')
+            ax1.plot(data_predicted[i], linestyle = 'dashed', marker='x', label = param + ' prédit')
         if data_fixed is not None:
-            ax1.plot(data_fixed[i], linestyle = 'dashed', marker='o', label = parametres[i] + ' corrigé')
+            ax1.plot(data_fixed[i], linestyle = 'dashed', marker='^', label = param + ' corrigé')
         ax1.set_xlabel("temps (jour)")
-        ax1.set_ylabel(parametres[i])
-        ax1.set_title(parametres[i])
+        ax1.set_ylabel(param)
+        ax1.set_title(param)
     fig.legend()
     fig.savefig(path + '/' + filename)
-    fig.show();
+    #fig.show();
 
 # A améliorer: faire graph sur toutes les données!
 graph_sequence(y_train[0], 'sequence_1_' + fichier_suffixe + '.png', X_train_pred[0])
-graph_sequence(y_train[38440], 'sequence_38441_' + fichier_suffixe + '.png', X_train_pred[38440])
 graph_sequence(scaler_param.inverse_transform(y_train[0].reshape(1, -1)).reshape(-1), 'sequence_1_denormalise_' + fichier_suffixe  +'.png', scaler_param.inverse_transform(X_train_pred[0].reshape(1, -1)).reshape(-1))
+# affichage du point d'erreur absolue maximale pour l'ETP
+ae_etp_max = np.where(train_ae_loss[:, 0] >= threshold[0])[0]
+graph_sequence(y_train[ae_etp_max].reshape(-1), 'sequence_ETP_aemax_' + fichier_suffixe + '.png', X_train_pred[ae_etp_max].reshape(-1))
+graph_sequence(scaler_param.inverse_transform(y_train[ae_etp_max].reshape(1, -1)).reshape(-1), 'sequence_ETP_aemax_denormalise_' + fichier_suffixe  +'.png', scaler_param.inverse_transform(X_train_pred[ae_etp_max].reshape(1, -1)).reshape(-1))
 
 X_val_pred = model.predict(X_val)
 val_ae_loss_param = np.abs(X_val_pred - y_test)
 
+# calcul RMSE dénormalisée
+rmse = sum((scaler_param.inverse_transform(y_test) - scaler_param.inverse_transform(X_val_pred))**2) / len(y_test)
+print("rmse = ", np.round(rmse, 2))
 
 plt.figure(figsize=(15,15))
 for i, param in enumerate(parametres):
     ax = plt.subplot(2, 2, i + 1)
-    ax.hist(val_ae_loss_param, bins=50, label = parametres)
+    ax.hist(val_ae_loss_param[:,1], bins=50, label = param)
     ax.axvline(threshold[i], ymax = ax.get_ylim()[1] * 0.9, linestyle = ':', color = 'red')
     ax.text(threshold[i], ax.get_ylim()[1] * 0.9, 'Seuil anomalie max', size = 11, color = 'red')
     ax.axvline(np.quantile(train_ae_loss, 0.9, axis = 0)[i], ymax = ax.get_ylim()[1] * 0.7, linestyle = ':', color = 'purple')
     ax.text(np.quantile(train_ae_loss, 0.98, axis = 0)[i], ax.get_ylim()[1] * 0.7, 'Seuil anomalie décile 9', size = 11, color = 'purple')
+    ax.set_xlim()
     ax.set_xlabel("Train Absolute Error loss")
     ax.set_ylabel("No of samples")
     ax.set_title("seuils définis par rapport aux résidus du jeu de validation")
@@ -190,7 +197,7 @@ for quant in [0.9, 0.95, 0.96, 0.97, 0.98, 0.99]:
 
 
 
-##### validation
+##### test
 X_test_pred = model.predict(X_test)
 test_ae_loss_param = np.abs(X_test_pred - y_val)
 for i in np.arange(1, 0.895, -0.005): # [1]:
@@ -263,3 +270,10 @@ FN_residus = pd.DataFrame(FN_residus, columns = parametres)
 print("l'autoencodeur reproduit les anomalies!!")
 FN_residus.max()
 np.abs(FN[[param + '_difference' for param in parametres]]).max()
+
+FP = test_recentes[(test_recentes.anomaly == 0) & (test_recentes.anomaly_pred == 1)][[param + '_pred' for param in parametres] + parametres + [param + '_difference' for param in parametres]]
+FP_residus = np.abs(FP[parametres].values - FP[[param + '_pred' for param in parametres]].values)
+FP_residus = pd.DataFrame(FP_residus, columns = parametres)
+print("l'autoencodeur reproduit les anomalies!!")
+FP_residus.max()
+np.abs(FP[[param + '_difference' for param in parametres]]).max()
