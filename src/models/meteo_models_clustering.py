@@ -4,7 +4,7 @@ from enum import Enum
 
 import os
 import pandas as pd
-import models as models
+import models_clustering as models
 import typer
 from typing import List, Optional
 from typing_extensions import Annotated
