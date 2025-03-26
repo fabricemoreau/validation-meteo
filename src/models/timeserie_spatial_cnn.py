@@ -88,11 +88,12 @@ df_9151_val = df_9151_val.drop(columns = [f"{param}_{i}" for i in range(NB_STATI
 column_indices = {name: i for i, name in enumerate(df_9151.columns)}
 
 n = len(df_9151)
-train_df = df_9151[0:int(n*0.8)]
-val_df = df_9151[int(n*0.8):]
+train_df = df_9151[0:int(n*0.3)]
+val_df = df_9151[int(n*0.3):int(n*0.5)]
 # discutable: on utilise les données brut pour validation (ce qui est ok), mais vu le peu d'anomalies, on utilise toute la série temporelle
 # il serait plus juste de prendre une partie qui n'a servi ni aux tests, ni à l'entrainement
-test_df = df_9151_val
+test_df = df_9151_val[int(n*0.5):]
+TN_anomalies = TN_anomalies[int(n*0.5):]
 
 num_features = df_9151.shape[1]
 
@@ -107,7 +108,8 @@ val_df = (val_df - train_mean) / train_std
 test_df = (test_df - train_mean) / train_std
 
 y_train = train_df.TN
-y_val = test_df.TN
+y_val  = val_df.TN
+y_test = test_df.TN
 
 # visualisation
 df_std = (df_9151 - train_mean) / train_std
@@ -296,19 +298,19 @@ baseline.compile(loss=tf.losses.MeanSquaredError(),
                  metrics=[tf.metrics.MeanAbsoluteError()])
 
 
-def detection_anomaly(model, window, y_train, y_val, TN_anomalies):
+def detection_anomaly(model, window, y_train, y_test, TN_anomalies):
     y_train_pred = model.predict(window.train).reshape(-1)
     y_train2 = y_train[window.input_width:]
     residus = np.abs(y_train2 - y_train_pred)
     seuil = residus.max() # 2.5°C = 0.45
     seuil = model.evaluate(window.train)[1]
     seuil = np.quantile(residus, 0.5) # 3.26 : bien trop élevé!!
-    y_val2 = y_val[window.input_width:]
-    y_val_pred = model.predict(window.test) # renvoie les sorties aléatoirement!!!
-    y_val_pred = y_val_pred.reshape(-1)
-    residus_val = np.abs(y_val2 - y_val_pred)
+    y_test2 = y_test[window.input_width:]
+    y_test_pred = model.predict(window.test) # renvoie les sorties aléatoirement!!!
+    y_test_pred = y_test_pred.reshape(-1)
+    residus_test = np.abs(y_test2 - y_test_pred)
     TN_anomalies2 = TN_anomalies[window.input_width:]
-    TN_anomalies_pred = np.where(residus_val > seuil, 1, 0)
+    TN_anomalies_pred = np.where(residus_test > seuil, 1, 0)
     print("recall: ", recall_score(TN_anomalies2, TN_anomalies_pred))
     print("f1_score: ", f1_score(TN_anomalies2, TN_anomalies_pred))
     print("precision: ", precision_score(TN_anomalies2, TN_anomalies_pred))
@@ -328,7 +330,7 @@ detection_f1 = {}
 accuracy = {}
 val_performance['Baseline'] = baseline.evaluate(single_step_window.val)
 performance['Baseline'] = baseline.evaluate(single_step_window.test, verbose=0)
-detection_recall['Baseline'], detection_f1['Baseline'], accuracy['Baseline']  = detection_anomaly(baseline, single_step_window, y_train, y_val, TN_anomalies)
+detection_recall['Baseline'], detection_f1['Baseline'], accuracy['Baseline']  = detection_anomaly(baseline, single_step_window, y_train, y_test, TN_anomalies)
 
 # sur 30 jours
 wide_window = WindowGenerator(
@@ -379,7 +381,7 @@ history = compile_and_fit(linear, single_step_window)
 
 val_performance['Linear'] = linear.evaluate(single_step_window.val)
 performance['Linear'] = linear.evaluate(single_step_window.test, verbose=0)
-detection_recall['Linear'], detection_f1['Linear'], accuracy['Linear'] = detection_anomaly(linear, single_step_window, y_train, y_val, TN_anomalies)
+detection_recall['Linear'], detection_f1['Linear'], accuracy['Linear'] = detection_anomaly(linear, single_step_window, y_train, y_test, TN_anomalies)
 
 
 wide_window.plot(linear)
@@ -407,7 +409,7 @@ history = compile_and_fit(dense, single_step_window)
 
 val_performance['Dense'] = dense.evaluate(single_step_window.val)
 performance['Dense'] = dense.evaluate(single_step_window.test, verbose=0)
-detection_recall['Dense'], detection_f1['Dense'], accuracy['Dense'] = detection_anomaly(dense, single_step_window, y_train, y_val, TN_anomalies)
+detection_recall['Dense'], detection_f1['Dense'], accuracy['Dense'] = detection_anomaly(dense, single_step_window, y_train, y_test, TN_anomalies)
 
 CONV_WIDTH = 10
 conv_window = WindowGenerator(
@@ -439,7 +441,7 @@ history = compile_and_fit(multi_step_dense, conv_window)
 
 val_performance['Multi step dense'] = multi_step_dense.evaluate(conv_window.val)
 performance['Multi step dense'] = multi_step_dense.evaluate(conv_window.test, verbose=0)
-detection_recall['Multi step dense'], detection_f1['Multi step dense'], accuracy['Multi step dense'] = detection_anomaly(multi_step_dense, conv_window, y_train, y_val, TN_anomalies)
+detection_recall['Multi step dense'], detection_f1['Multi step dense'], accuracy['Multi step dense'] = detection_anomaly(multi_step_dense, conv_window, y_train, y_test, TN_anomalies)
 
 conv_window.plot(multi_step_dense)
 plt.savefig('data/timeserie/plot10.png')
@@ -462,7 +464,7 @@ history = compile_and_fit(conv_model, conv_window)
 
 val_performance['Conv'] = conv_model.evaluate(conv_window.val)
 performance['Conv'] = conv_model.evaluate(conv_window.test, verbose=0)
-detection_recall['Conv'], detection_f1['Conv'], accuracy['Conv'] = detection_anomaly(conv_model, conv_window, y_train, y_val, TN_anomalies)
+detection_recall['Conv'], detection_f1['Conv'], accuracy['Conv'] = detection_anomaly(conv_model, conv_window, y_train, y_test, TN_anomalies)
 
 LABEL_WIDTH = 30
 INPUT_WIDTH = LABEL_WIDTH + (CONV_WIDTH - 1)
@@ -494,7 +496,7 @@ history = compile_and_fit(lstm_model, wide_window)
 
 val_performance['LSTM'] = lstm_model.evaluate(wide_window.val)
 performance['LSTM'] = lstm_model.evaluate(wide_window.test, verbose=0)
-#detection_recall['LSTM'], detection_f1['LSTM'] = detection_anomaly(lstm_model, wide_window, y_train, y_val, TN_anomalies)
+#detection_recall['LSTM'], detection_f1['LSTM'] = detection_anomaly(lstm_model, wide_window, y_train, y_test, TN_anomalies)
 
 wide_window.plot(lstm_model)
 plt.savefig('data/timeserie/plot13.png')
@@ -520,3 +522,31 @@ plt.savefig('data/timeserie/plot99.png')
 for name, value in performance.items():
   print(f'{name:12s} normalized: {value[1]:0.4f}')
   print(f'{name:12s} denormalized: {value[1] * train_std['TN']:0.4f}')
+
+#### recap
+# Préparation des données pour le graphique
+models = list(detection_recall.keys())
+recall_values = list(detection_recall.values())
+accuracy_values = list(accuracy.values())
+
+# Création du graphique en barres
+x = np.arange(len(models))  # Position des barres
+width = 0.35  # Largeur des barres
+
+plt.figure(figsize=(10, 6))
+# Barres pour detection_recall
+plt.bar(x - width/2, recall_values, width, label='Recall', color='skyblue')
+# Barres pour accuracy
+plt.bar(x + width/2, accuracy_values, width, label='Accuracy', color='orange')
+
+# Ajout des labels et du titre
+plt.xlabel('Modèles')
+plt.ylabel('Valeurs')
+plt.title('Performance des modèles : Recall et Accuracy')
+plt.xticks(ticks=x, labels=models, rotation=45)
+plt.legend()
+
+# Sauvegarde et affichage
+plt.tight_layout()
+plt.savefig('data/timeserie/detection_performance.png')
+#plt.show()
