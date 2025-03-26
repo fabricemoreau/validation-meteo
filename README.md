@@ -39,17 +39,22 @@ This repo is a Starting Pack for DS projects. You can rearrange the structure to
     │   ├── models         <- Scripts to train models and then use trained models to make
     │   │   │                 predictions
     │   │   ├── meteo_models_clustering.py <- main script to call
-    │   │   └── models_clustering     <- all models are here: one subfolder per model. example below
+    │   │   ├── autoencodeur          <-  model autoencodeur
+    │   │   └── models_clustering     <- all clustering models are here: one subfolder per model. example below
     │   │       └── my_model
-    │   │           ├── preprocessing.py <- some models need additionnal preprocessing to run. called by meteo_models.py
-    │   │           ├── train.py <- script for training model: called by meteo_models.py
-    │   │           └── hyperparametre_search.py <- some models have this script to manually call to search best hyperparameters
+    │   │           ├── preprocessing.py <- some models need additionnal preprocessing to run. called by meteo_models.py
+    │   │           ├── train.py <- script for training model: called by meteo_models.py
+    │   │           └── hyperparametre_search.py <- some models have this script to manually call to search best hyperparameters
     │   │
     │   ├── streamlit  <- Scripts for streamlit
     │   │   └── app.py
 
+
 ## How to configure your PC to develop with this repository with VSCode
 Instructions [Here](vscode-dev-config.md)
+
+## Data source
+Source data is not included in this repository. Please contact author.
 
 ## Model usage
 Help:
