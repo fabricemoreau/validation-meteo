@@ -11,7 +11,6 @@ from keras.saving import register_keras_serializable
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import GaussianNoise
 from tensorflow.keras.layers import Dropout, BatchNormalization
 from tensorflow.keras.layers import LeakyReLU
 from keras.optimizers import Adam
