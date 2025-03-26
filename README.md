@@ -38,8 +38,8 @@ This repo is a Starting Pack for DS projects. You can rearrange the structure to
     │   │
     │   ├── models         <- Scripts to train models and then use trained models to make
     │   │   │                 predictions
-    │   │   ├── meteo_models.py <- main script to call
-    │   │   └── models     <- all models are here: one subfolder per model. example below
+    │   │   ├── meteo_models_clustering.py <- main script to call
+    │   │   └── models_clustering     <- all models are here: one subfolder per model. example below
     │   │       └── my_model
     │   │           ├── preprocessing.py <- some models need additionnal preprocessing to run. called by meteo_models.py
     │   │           ├── train.py <- script for training model: called by meteo_models.py
@@ -54,19 +54,19 @@ Instructions [Here](vscode-dev-config.md)
 ## Model usage
 Help:
 ```python
-python src/models/meteo_models.py --help
+python src/models/meteo_models_clustering.py --help
 ```
 
 To use a model:
 ```python
 # step 1: additionnal preprocessing
-python src/models/meteo_models.py prepare isolationForest data/processed/meteo_pivot_cleaned_2010-2024_0.1.csv --no-joinspatial
+python src/models/meteo_models_clustering.py prepare isolationForest data/processed/meteo_pivot_cleaned_2010-2024_0.1.csv --no-joinspatial
 # this command generate model_preprocessed file
 # step 2: train
-python src/models/meteo_models.py train model_preprocessed --no-joinspatial
+python src/models/meteo_models_clustering.py train model_preprocessed --no-joinspatial
 # this command generate trained_file
 # step 3: report
-python src/models/meteo_models.py check trained_file --no-joinspatial
+python src/models/meteo_models_clustering.py check trained_file --no-joinspatial
 ```
 
 ## Streamlit usage
