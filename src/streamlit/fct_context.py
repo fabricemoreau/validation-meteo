@@ -10,9 +10,13 @@ def stations_map(stations: pd.DataFrame, title = "Carte des stations météo", f
     m =  Basemap(llcrnrlon=-5.,llcrnrlat=42.,urcrnrlon=9.5,urcrnrlat=51.,
                 resolution='i', projection='tmerc', lat_0 = 39.5, lon_0 = -3.25)
 
+    #m.drawcoastlines()
+    #m.drawcountries()
+    #m.shadedrelief()
+    m.drawmapboundary(fill_color='aqua')
+    m.fillcontinents(color='coral',lake_color='aqua')
     m.drawcoastlines()
     m.drawcountries()
-    m.shadedrelief()
     x, y = m(stations.Longitude, stations.Latitude)
     m.scatter(x, y, marker='D',color='m')
     plt.title(title)
