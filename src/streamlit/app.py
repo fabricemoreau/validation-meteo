@@ -1,8 +1,10 @@
 
 import streamlit as st
+import streamlit_mermaid as stmd
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import datetime #cartes
+from datetime import datetime 
+from pathlib import Path
 
 
 #from src.streamlit.fct_context import stations_map, plot_distances
@@ -27,9 +29,9 @@ if page == pages[0] :
 # Le jeu de données
 elif page == pages[1] :
     st.write("## Le jeu de données")
-    
-    st.write('### Stations météo')
-    if st.checkbox("Une couverture nationale en France continentale"):
+    if st.checkbox("Structure", value = True):
+        stmd.st_mermaid(Path('reports/figures/schema-donnees.mmd').read_text())
+    if st.checkbox("Une couverture nationale en France continentale", value = True):
         date_consultation = st.slider(
             "Date de consultation : ",
             min_value=datetime(2010, 1, 1),
@@ -42,10 +44,10 @@ elif page == pages[1] :
         fig = stations_map(sm_ouvertes, f"Carte des stations météo ouvertes au {date_consultation}", figsize = (7,7))
         st.pyplot(fig)
     
-    if st.checkbox("des séries temporelles non synchrones"):
+    if st.checkbox("des séries temporelles non synchrones", value = True):
         st.image('./reports/figures/series_stations_meteo.png', caption = 'ensemble des séries temporelles')
     # distances
-    if st.checkbox("densité du réseau"):
+    if st.checkbox("densité du réseau", value = True):
         fig = plot_distances(stations[[f"distance_station{i}" for i in range(1, 6)]])
         st.plotly_chart(fig)
     # séries
