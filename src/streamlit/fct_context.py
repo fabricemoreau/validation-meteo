@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
+import plotly.graph_objects as go
 from mpl_toolkits.basemap import Basemap # afficher les cartes
 
 
@@ -38,13 +39,29 @@ def plot_distances(distances, figsize = (10, 10)):
     )
     return fig
 
-def plot_anomalies():
-    return 1
+def plot_jours(jours):
+    #fig = px.box(jours.melt(id_vars = "datemesure"), x = 'datemesure', y="value", color="variable") 
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=jours.datemesure, y=jours.day_sin, name='sinus'))
+    fig.add_trace(go.Scatter(x=jours.datemesure, y=jours.day_cos, name='cosinus'))
+    fig.update_layout(hovermode='x unified')
+    fig.update_layout(
+        title={
+            'text': "Distances moyenne des stations les plus proches"
+        },
+        xaxis={
+            'title': {'text': "rang de proximité"}
+        }
+        ,
+        yaxis={
+            'title': {'text': "distance (km)"}
+        }
+    )
+    return fig
+    
 
 
 def plot_custom_hover():
-    import plotly.graph_objects as go
-
     fig = go.Figure(go.Scatter(
         x = [1,2,3,4,5],
         y = [2.02825,1.63728,6.83839,4.8485,4.73463],
