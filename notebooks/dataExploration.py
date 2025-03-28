@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from IPython.display import display
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -14,7 +15,7 @@ import plotly.graph_objects as go
 dataPath = Path("..") / "data" / "raw" / "donneesmeteo_2010-2024_500stations.csv"
 print("read data from ", dataPath)
 # dataPath = Path("../..") / "validation-meteo-data" / "donneesmeteo_2011-2015_completes" / "donneesmeteo_2011-2015_completes.csv"
-meteodf = pd.read_csv(dataPath, sep=";")
+meteodf = pd.read_csv(dataPath, sep=";", parse_dates=['datemesure'])
 display(meteodf.head())
 # %%
 print("Parameters:", meteodf.libellecourt.unique())
@@ -51,11 +52,6 @@ print("-----NaN count --------")
 display(meteodfToUse.isna().sum())
 meteodfToUse.valeurorigine.min()
 # %%
-meteodfToUse.datemesure = pd.to_datetime(
-    meteodfToUse.datemesure.apply(lambda value: value.split(" ")[0])
-)  # all measurements date at 00:00:00 as hour so we can just drop it
-meteodfToUse.info()
-# %%
 meteodfToUse["correction"] = (meteodfToUse.valeur != meteodfToUse.valeurorigine).astype(
     int
 )  # values that have been corrected have valeurorigine different from valeur (threshold selection can be inserted here to avoid little corrections)
@@ -72,7 +68,7 @@ if not os.path.exists(imagesDir):
     print("create image directory")
     os.makedirs(imagesDir)
 
-
+# %%
 def plotVarDateParameter(
     df,
     varToPlot,
@@ -195,7 +191,6 @@ histVarDateParameter(
     varToPlotName="Corrections (no nans)",
     saveToDir=imagesDir,
 )
-
 # %%
 correctiondfM = (
     meteodfToUse.groupby([meteodfToUse.datemesure.dt.month, meteodfToUse.libellecourt])
