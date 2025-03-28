@@ -23,7 +23,7 @@ def stations_map(stations: pd.DataFrame, title = "Carte des stations météo", f
     return fig
 
 def plot_distances(distances, figsize = (10, 10)):
-    fig = px.box(distances)
+    fig = px.box(distances) # px.scattermap?
     fig.update_layout(
         title={
             'text': "Distances moyenne des stations les plus proches"
@@ -37,3 +37,32 @@ def plot_distances(distances, figsize = (10, 10)):
         }
     )
     return fig
+
+def plot_anomalies():
+    return 1
+
+
+def plot_custom_hover():
+    import plotly.graph_objects as go
+
+    fig = go.Figure(go.Scatter(
+        x = [1,2,3,4,5],
+        y = [2.02825,1.63728,6.83839,4.8485,4.73463],
+        hovertemplate =
+        '<i>Price</i>: $%{y:.2f}'+
+        '<br><b>X</b>: %{x}<br>'+
+        '<b>%{text}</b>',
+        text = ['Custom text {}'.format(i + 1) for i in range(5)],
+        showlegend = False))
+
+    fig.add_trace(go.Scatter(
+        x = [1,2,3,4,5],
+        y = [3.02825,2.63728,4.83839,3.8485,1.73463],
+        hovertemplate = 'Price: %{y:$.2f}<extra></extra>',
+        showlegend = False))
+
+    fig.update_layout(
+        hoverlabel_align = 'right',
+        title = "Set hover text with hovertemplate")
+
+    fig.show()
