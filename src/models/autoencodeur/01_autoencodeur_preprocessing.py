@@ -96,6 +96,29 @@ joblib.dump(scaler_param, PATH + '/joblib_scaler_param_' + fichier_suffixe + '.g
 test = pd.read_csv(PATH + '/test_preprocessed_' + fichier_suffixe + '.csv', sep = ';')
 test[PARAMETRES] = scaler_param.transform(test[PARAMETRES])
 
+###################### graph
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
+matrice_trainval = meteobydate[['datemesure', 'codearvalis', 'val']]
+matrice_trainval['set'] = 1 #train
+matrice_trainval.loc[matrice_trainval.val == 1, 'set'] = 2 #val
+
+matrice_test = test[['datemesure', 'codearvalis']]
+matrice_test['set'] = 3
+
+matrice_data = pd.concat([matrice_trainval[['datemesure', 'codearvalis', 'set']], matrice_test]).reset_index(drop = True)
+# la station 625 est dupliquée 
+matrice_data = matrice_data.drop_duplicates()
+matrice_data = matrice_data.pivot(index = 'codearvalis', columns = 'datemesure', values='set')
+matrice_data = matrice_data.fillna(0)
+
+fig = plt.figure()
+cmap = ListedColormap(['white', 'red', 'blue', 'green'])
+plt.matshow(matrice_data.head(100), cmap = cmap, aspect = 10)
+plt.xticks([i for i in range(0, matrice_data.shape[1]+1, 366)], [matrice_data.columns[i].year for i in range(0, matrice_data.shape[1]+1, 366)])
+plt.xlabel("Temps (années)")
+plt.ylabel("Numéro de station météo")
+plt.savefig('./reports/figures/series_train_val_test.png')
 
 
