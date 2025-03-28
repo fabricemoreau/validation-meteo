@@ -74,6 +74,18 @@ for param in PARAMETRES:
     fig.subplots_adjust(bottom=0.15) 
     plt.savefig('./reports/figures/' + param + '_corrections.png')
 
+# days_sin_cos
+jours = df.loc[(df.codearvalis == 9151) & df.datemesure.dt.year.isin([2014, 2015]), ['datemesure', 'day_sin', 'day_cos']]
+jours['numero_jour'] = jours.datemesure.dt.day_of_year
+jours.to_csv('reports/streamlit-data/jours.csv', index = False, sep = ';')
+
+# génération tableaux données
+brut = pd.read_csv('data/raw/donneesmeteo_2010-2024_363stations.csv', sep = ';', parse_dates = ['datemesure'])
+brut.sort_values(['datemesure', 'codearvalis']).head(50).to_csv('reports/streamlit-data/df_brut.csv', index = False, sep =';')
+
+sample = pd.read_csv('data/processed/meteo_pivot_2010-2012.csv', sep = ';', parse_dates = ['datemesure'])
+sample.sort_values(['datemesure', 'codearvalis']).head(10).to_csv('reports/streamlit-data/df_sample.csv', index = False, sep =';')
+
 # chargement liste stations
 stations = pd.read_csv(STATIONS, sep = ';')
 dates_presence =  df.groupby('codearvalis').datemesure.agg(['min', 'max'])
