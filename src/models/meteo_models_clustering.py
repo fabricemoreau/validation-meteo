@@ -87,7 +87,7 @@ def prepare(
     try:
         print(f"Lazy loading {modelname} train module")
         preprocessing_module = __import__(
-            f"models.{modelname}.preprocessing", fromlist="preprocessing"
+            f"models_clustering.{modelname}.preprocessing", fromlist="preprocessing"
         )
     except ModuleNotFoundError:
         print("No preprocessing for {modelname}")
@@ -163,7 +163,7 @@ def train(
     """
     # import module
     print(f"Lazy loading {modelname} train module")
-    train_module = __import__(f"models.{modelname}.train", fromlist="train")
+    train_module = __import__(f"models_clustering.{modelname}.train", fromlist="train")
 
     resultsDatabaseFilePath = (
         databasefilepath.parents[1]
