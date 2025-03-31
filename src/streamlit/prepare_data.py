@@ -1,5 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from tensorflow.keras.models import load_model 
+import visualkeras
 
 DONNEES = "data/processed/meteo_pivot_cleaned_2010-2024_0.1.csv" 
 STATIONS = "data/processed/stationsmeteo_processed_2010-2024.csv"
@@ -92,6 +94,13 @@ dates_presence =  df.groupby('codearvalis').datemesure.agg(['min', 'max'])
 stations = stations.merge(dates_presence, left_on = 'Station', right_index = True)
 stations.to_csv('reports/streamlit-data/stations.csv', index = False, sep = ';')
 
+# schema autoencodeur
+model = load_model('models/autoencodeur.keras')
+visualkeras.layered_view(model, 
+                         to_file='reports/figures/autoencodeur_schema.png',
+                         legend = True,
+                         draw_volume = False,
+                         scale_xy= 2)
 
 """
 from imblearn.under_sampling import RandomUnderSampler

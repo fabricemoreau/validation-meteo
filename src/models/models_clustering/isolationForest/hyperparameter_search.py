@@ -63,9 +63,9 @@ param_model = {
 # a tester ensuite
 contaminations = df["anomaly"].mean() + df["anomaly"].std() * range(6) / 2
 param_model = {
-    'n_estimators' : [25, 50, 75, 100],
+    'n_estimators' : [25, 50, 75, 100, 200],
     'contamination' : contaminations,
-    'max_samples' :  [0.5, 0.4, 0.25],
+    'max_samples' :  [0.5, 0.2, 0.05],
     'max_features' : [8, 6, 4, 1],
 }
 
@@ -97,6 +97,23 @@ for i in range(0, len(param_grid)):
     print("f1 score ", f1[i])
     print("accuracy score ", accuracy[i])
     if log_file is not None:
+        crosstab = pd.crosstab(
+                    y_train,
+                    y_pred,
+                    rownames=["Classe réelle"],
+                    colnames=["Classe prédite"],
+                )
+        f = open(log_file, "a")
+        f.write(str(param_grid[i]) + ';' + 
+                str(recall[i]) + ';' +
+                str(accuracy[i]) + ';' + 
+                str(crosstab.iloc[0,0]) + ';' + 
+                str(crosstab.iloc[1,1]) + ';' + 
+                str(crosstab.iloc[1,0]) + ';' + 
+                str(crosstab.iloc[0,1]) + "\n"
+                )
+        f.close()
+        """
         f = open(log_file, "a")
         f.writelines
         f.write("=======================\n")
@@ -119,6 +136,7 @@ for i in range(0, len(param_grid)):
         f.write("roc = " + str(roc_auc_score(y_train, y_pred)) + "\n")
         f.write("mcc = " + str(matthews_corrcoef(y_train, y_pred)) + "\n")
         f.close()
+        """
     if recall[i] > best_recall:
         y_pred_best = y_pred
 

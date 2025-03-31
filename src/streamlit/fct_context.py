@@ -40,7 +40,6 @@ def plot_distances(distances, figsize = (10, 10)):
     return fig
 
 def plot_jours(jours):
-    #fig = px.box(jours.melt(id_vars = "datemesure"), x = 'datemesure', y="value", color="variable") 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=jours.datemesure, y=jours.day_sin, name='sinus'))
     fig.add_trace(go.Scatter(x=jours.datemesure, y=jours.day_cos, name='cosinus'))
@@ -59,7 +58,22 @@ def plot_jours(jours):
     )
     return fig
     
-
+def plot_hyperparam_model(df):
+    fig = go.Figure(go.Scatter(x = df.recall, y = df.accuracy, 
+                               mode='markers',
+                               customdata= df[['param', 'TP', 'TN', 'FP', 'FN']],
+                               hovertemplate = 
+                                '<b>Recall:</b>: %{x:.1%}' + 
+                                '<br>Accuracy: %{y:.1%}' + 
+                                '<br><i>Hyperparameters</i>: %{customdata[0]}' +
+                                '<br>TN: %{customdata[2]:.1%}' +
+                                '<br>TP: %{customdata[1]:.1%}' +
+                                '<br><b>FN: %{customdata[4]:.1%}</b>' +
+                                '<br><b>FP: %{customdata[3]:.1%}</b>'
+                     ) 
+    )
+    return fig
+    
 
 def plot_custom_hover():
     fig = go.Figure(go.Scatter(
