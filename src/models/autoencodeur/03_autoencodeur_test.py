@@ -42,13 +42,16 @@ y_test = X_test[:,0:noutputs]
 scaler_param = joblib.load(PATH + '/joblib_scaler_param_' + FICHIER_SUFFIXE + '.gz')
 model = load_model(PATH + '/autoencodeur_checkpoint_' + FICHIER_SUFFIXE + '.keras')
 
-plot_model(model, PATH + '/autoencoder_schema_ ' + FICHIER_SUFFIXE + '.png', show_shapes=True)
+plot_model(model, PATH + '/autoencoder_schema_ ' + FICHIER_SUFFIXE + '.png', 
+           show_shapes=True,
+           show_layer_names = True)
 
 X_train_pred = model.predict(X_train)
 train_ae_loss = np.abs(X_train_pred - y_train)
 # seuil sécuritaire
 threshold = np.max(train_ae_loss, axis = 0)
 print("seuil d'anomalie", threshold)
+
 
 # graphique des résidus en fonction du seuil sécuritaire et du seuil décile 9
 plt.figure(figsize=(15, 15))
@@ -60,7 +63,7 @@ for i, param in enumerate(PARAMETRES):
     ax.axvline(np.quantile(train_ae_loss[:,i], 0.9, axis = 0), ymax = ax.get_ylim()[1] * 0.7, linestyle = ':', color = 'purple')
     ax.text(np.quantile(train_ae_loss[:,i], 0.98, axis = 0), ax.get_ylim()[1] * 0.7, 'Seuil anomalie décile 9', size = 11, color = 'purple')
     
-    ax.set_xlabel("Train Absolute Error loss")
+    ax.set_xlabel(f"{param} Train Absolute Error loss")
     ax.set_ylabel("No of samples")
     ax.set_title("seuils définis par rapport aux résidus du jeu d'entrainement")
 plt.savefig(PATH + '/train_ae_loss_' + FICHIER_SUFFIXE + '.png')
@@ -106,8 +109,11 @@ X_val_pred = model.predict(X_val)
 val_ae_loss_param = np.abs(X_val_pred - y_val)
 
 # calcul RMSE dénormalisée
-rmse = sum((scaler_param.inverse_transform(y_val) - scaler_param.inverse_transform(X_val_pred))**2) / len(y_test)
+rmse = np.sqrt(sum((scaler_param.inverse_transform(y_val) - scaler_param.inverse_transform(X_val_pred))**2) / len(y_test))
 print("rmse = ", np.round(rmse, 2))
+
+ae = np.quantile(np.abs(scaler_param.inverse_transform(y_val) - scaler_param.inverse_transform(X_val_pred)), 0.9, axis = 0)
+print("ae décile 9 = ", ae)
 
 plt.figure(figsize=(15,15))
 for i, param in enumerate(PARAMETRES):
@@ -118,9 +124,9 @@ for i, param in enumerate(PARAMETRES):
     ax.axvline(np.quantile(train_ae_loss, 0.9, axis = 0)[i], ymax = ax.get_ylim()[1] * 0.7, linestyle = ':', color = 'purple')
     ax.text(np.quantile(train_ae_loss, 0.98, axis = 0)[i], ax.get_ylim()[1] * 0.7, 'Seuil anomalie décile 9', size = 11, color = 'purple')
     ax.set_xlim()
-    ax.set_xlabel("Train Absolute Error loss")
+    ax.set_xlabel(f"{param} Train Absolute Error loss")
     ax.set_ylabel("No of samples")
-    ax.set_title("seuils définis par rapport aux résidus du jeu de validation")
+    ax.set_title("seuils définis par rapport aux résidus du jeu d'entrainement")
 plt.savefig(PATH + '/val_ae_loss_' + FICHIER_SUFFIXE + '.png')
 #plt.show()
 
