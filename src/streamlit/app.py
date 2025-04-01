@@ -298,13 +298,40 @@ elif page == pages[7] :
             else:
                 rows_autoenc[5].text('ok')
             rows_autoenc[5].text('') # pour aligner avec les inputs
-            
-        # modif de valeur
-        # prédiction
 # Conclusion
 elif page == pages[8] :
     st.write("### Conclusion")
-    # preprocessing spatiotemporel
+    if st.checkbox("Bilan", value = True):
+        st.markdown("""
+Aucune des approches testées ne donnent de résultats suffisamment performants. Plusieurs raisons à celà:
+- Les corrections dans le jeu de données sont de nature multiples. Accéder à la motivation des corrections permettrait d'afiner leur prise en compte
+  
+  *exemple: un modèle pour les valeurs aberrantes et un pour les corrections fines*
+- Mieux prendre en compte le caractère saisonnier des données météo, 
+  
+  *exemple: transformer les séries temporelles en séries stationnaires*
+- Prendre en compte la dimension spatio-temporelle du jeu de données: utiliser directement les données des stations météo proches et les données des jours précédents
+pour faire cette détection.
+                    """)
+    if st.checkbox("Utilisation des données spatiotemporelles: Preuve de concept", value = True):
+        st.markdown("""
+En reprenant l'approche de l'autoencodeur et en se limitant à *une station météo* et *un paramètre météo*, soit 5479 données.
+
+A partir de ces données, on génère des séries temporelles de 10 jours contenant la valeur des paramètres météo de la station et des trois stations les plus proches.
+
+La target est le paramètre météo TN du jour qui suit:
+                    """)
+        st.image("./reports/figures/timeserie_example.png", caption = "Trois exemples de séries générées")
+        st.text("On peut entrainer un réseau de neurone sur ces données")
+        st.image("./reports/figures/timeserie_multilayer.png", caption = "Trois exemples de prédictions")
+        st.text("On obtient des résultats encourageants:")
+        st.text("recall: 60.0%, accuracy: 97.7%")
+        crosstab_ts = pd.DataFrame({0: [2660, 4], 1: [60, 6]})
+        crosstab_ts.columns.name = "Prédit"
+        crosstab_ts.index.name = "Observé"
+        st.dataframe(crosstab_ts)
+        st.text("Néanmoins, ces résultats devront être confirmé sur un plus grand jeu de données")
+        
 
 
 
