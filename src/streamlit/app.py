@@ -87,11 +87,22 @@ page = st.sidebar.radio("Aller vers", pages)
 # Contexte
 if page == pages[0] :
     st.write("### Accueil")
+    st.image('src/streamlit/assets/Arc-en-ciel-sur-le-Grand-Canyon.jpg', caption="illustration. Crédits : https://www.photo-paysage.com/displayimage.php?album=277&pid=6229")
 elif page == pages[1] :
     st.write("### Contexte")
+    st.markdown("""
+Arvalis est un institut technique agricole qui conduit des actions de formation, communication, recherche et mise à disposition d'outils et offres de service pour les agriculteurs.
+
+La donnée météo est au coeur de ces activités, c'est pourquoi Arvalis s'est doté d'un réseau de stations météo et s'approvisionne en données auprès de Météo France.
+
+Un responsable données météo vérifie chaque jour la qualité des données, corrige des erreurs et complète les absences de données. Il dispose pour cela d'une chaîne de traitement qui effectue des contrôles automatiques.
+
+L'objectif de ce projet est d'améliorer ce système de contrôle pour gagner en efficience.
+                """)
 # Le jeu de données
 elif page == pages[2] :
     st.write("### Le jeu de données")
+    st.write("Nous disposons des données de la base avec 15 ans d'historique, avec les données brutes et les données corrigées.")
     
     if st.checkbox("Structure", value = True):
         stmd.st_mermaid(Path('reports/figures/schema-donnees.mmd').read_text())
