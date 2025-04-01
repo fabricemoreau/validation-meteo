@@ -103,8 +103,9 @@ def train(
             f.write("roc = " + str(roc_auc_score(y, y_pred)) + "\n")
             f.write("mcc = " + str(matthews_corrcoef(y, y_pred)) + "\n")
             f.close()
-        if recall[i] > best_recall:
+        if (recall[i] > best_recall) & (accuracy[i] > 0.7):
             y_pred_best = y_pred
+            best_recall = recall[i]
 
     recap = pd.DataFrame(
             {"param": param_grid, "accuracy": accuracy, "recall": recall, "precision": precision, "roc": roc, "mcc": mcc}
