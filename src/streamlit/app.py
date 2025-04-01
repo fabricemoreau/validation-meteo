@@ -1,14 +1,20 @@
 
 import streamlit as st
 import streamlit_mermaid as stmd
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime 
 from pathlib import Path
+from PIL import Image
+from tensorflow.keras.models import load_model 
+import joblib
 
-
-#from src.streamlit.fct_context import stations_map, plot_distances
 import fct_context as fct
+
+@st.cache_resource
+def load_logomf():
+    return Image.open('src/streamlit/assets/LOGO_MF.png')
 
 @st.cache_resource
 def load_data():
@@ -37,11 +43,39 @@ def load_isolationforest_hyperparameters():
     data[['TP', 'TN', 'FP', 'FN']] = data[['TP', 'TN', 'FP', 'FN']] / total
     return data
 
+@st.cache_resource
+def load_anomaly_2025():
+    data = pd.read_csv('./reports/streamlit-data/anomalies2025.csv', sep = ';', parse_dates=['datemesure'])
+    return data
+
+@st.cache_resource
+def load_station4501():
+    data = pd.read_csv('./reports/streamlit-data/station4501.csv', sep = ';', parse_dates=['datemesure'])
+    return data
+
+@st.cache_resource
+def load_autoencodeur_scalers():
+    model = load_model('./models/autoencodeur.keras')
+    scaler_param = joblib.load('models/joblib_scaler_param_ETP-GLOT-TN-TX_2010-2022-0.1.gz')
+    scaler_meta = joblib.load('models/joblib_scaler_meta.gz')
+    return model, scaler_param, scaler_meta
+
+logomf = load_logomf()
 stations = load_data()
 example_struct = load_example_struct()
 jours = load_jours()
 dbscan_hyperparameters = load_dbscan_hyperparameters()
 isolationforest_hyperparameters = load_isolationforest_hyperparameters()
+anomaly2025 = load_anomaly_2025()
+station = load_station4501()
+autoencodeur, scaler_param, scaler_meta = load_autoencodeur_scalers()
+
+seuil_anomalie_data = pd.DataFrame({'ETP' : [0.18],
+                                   'GLOT (J/cm²)': [83],
+                                   'RR (mm)': [0.6],
+                                   'TN (°C)': [0.6],
+                                   'TX (°C)': [0.8]
+                                   })
 
 st.title("Projet détection d'anomalie sur des données météo")
 st.sidebar.title("Sommaire")
@@ -127,12 +161,7 @@ elif page == pages[4] :
     # seuillage anomalies
     if st.checkbox("Seuillage des anomalies", value = True):
         st.write('Beaucoup de très faibles corrections. On retire des anomalies celles qui sont inférieures à 10% de l''écart-type')
-        st.dataframe(pd.DataFrame({'ETP' : [0.18],
-                                   'GLOT (J/cm²)': [83],
-                                   'RR (mm)': [0.6],
-                                   'TN (°C)': [0.6],
-                                   'TX (°C)': [0.8]
-                                   }))
+        st.dataframe(seuil_anomalie_data)
 # Modélisation
 elif page == pages[5] :
     st.write("### Modèles de clustering")
@@ -141,6 +170,7 @@ elif page == pages[5] :
         st.write("Détection d'anomalie par la densité")
         st.write("Données utilisées: coordonnées géographiques, altitude, day_sin, day_cos et paramètres non corrigés")
         st.write("Normalisation par centrage-réduction")
+        st.write("Utilisation des données sur 1/5e des données en raison des capacités de traitement de la machine")
         st.plotly_chart(fct.plot_hyperparam_model(dbscan_hyperparameters))
         # ajouter graphe des anomalies par paramètre
         
@@ -149,6 +179,7 @@ elif page == pages[5] :
         st.write("Détection d'anomalie par la recherche de règles de séparations pour isoler les anomalies")
         st.write("Données utilisées: coordonnées géographiques, altitude, day_sin, day_cos et paramètres non corrigés")
         st.write("Normalisation par centrage-réduction")
+        st.write("Toutes les données sont utilisées")
         st.plotly_chart(fct.plot_hyperparam_model(isolationforest_hyperparameters))
         # ajouter graphe des anomalies par paramètre
 # Modèle autoencodeur
@@ -191,7 +222,85 @@ elif page == pages[6] :
 # Exemples
 elif page == pages[7] :
     st.write("### Exemples")
-    # récapitulatif des sorties modèles?
+    if st.checkbox("Les anomalies détectées", value = True):
+        param = st.radio(
+                "Choisissez un paramètre météo",
+                ['ETP', 'GLOT', 'RR', 'TN', 'TX'],
+                captions=['ETP', 'Rayonnement global', 'Cumul de pluie', 'Température minimale', 'Température maximale'],
+                horizontal=True
+            )
+        fig = fct.plot_anomaly(anomaly2025, param, logomf)
+        st.plotly_chart(fig)
+    if st.checkbox("Autoencodeur sur une station météo", value = True):
+        st.plotly_chart(fct.plot_station(station, logomf))
+        st.text("matrice de confusion:")
+        st.dataframe(pd.crosstab(station['anomaly'], station['anomaly_autoenc'], rownames=["Observé"], colnames=["Prédit"]))
+    # autoencodeur: si on modifie des valeurs
+    if st.checkbox("Test de prédiction de l'autoencodeur", value = True):
+        date_consultation_station = st.slider(
+            "Choisir une date : ",
+            min_value=datetime(2024, 1, 1),
+            max_value=datetime(2024, 12, 31),
+            value=datetime(2024, 11, 23),
+            format="MM/DD/YY",
+        )
+        rows_autoenc = st.columns(6, vertical_alignment = 'center')
+        input_val = [0,0,0,0]
+        parametres = ['ETP', 'GLOT', 'TN', 'TX']
+        seuil_anomalie_data_autoenc = seuil_anomalie_data.drop(columns = 'RR (mm)').iloc[0].values
+        
+        rows_autoenc[0].markdown('**Paramètre**')
+        for param in parametres:
+            rows_autoenc[0].text(param)
+            rows_autoenc[0].text('') # pour aligner avec les inputs
+        rows_autoenc[1].markdown('**Valeur station**')
+        for param in parametres:
+            rows_autoenc[1].text(station.loc[station.datemesure == date_consultation_station, f"{param}_origine"].values[0])
+            rows_autoenc[1].text('') # pour aligner avec les inputs
+        rows_autoenc[2].markdown('**Valeur à tester**')
+        for i, param in enumerate(parametres):
+            input_val[i] = rows_autoenc[2].number_input(label= param, 
+                                                        label_visibility='collapsed',
+                                                        step = 0.5,
+                                                        format = "%0.1f",
+                                                        placeholder = station.loc[station.datemesure == date_consultation_station, param].values[0],
+                                                        value = station.loc[station.datemesure == date_consultation_station, param].values[0])
+        rows_autoenc[3].markdown('**Anomalie**')
+        for i, param in enumerate(parametres):
+            dif = np.abs(station.loc[station.datemesure == date_consultation_station, f"{param}_origine"].values[0] - input_val[i])
+            if dif > seuil_anomalie_data_autoenc[i]:
+                rows_autoenc[3].markdown("**anomalie**")
+            else:
+                rows_autoenc[3].text("ok")
+            rows_autoenc[3].text('') # pour aligner avec les inputs
+        #calcul
+        X = station.loc[station.datemesure == date_consultation_station, 
+                        ['ETP',
+                        'GLOT',
+                        'TN',
+                        'TX',
+                        'Altitude',
+                        'Lambert93x',
+                        'Lambert93y',
+                        'day_sin',
+                        'day_cos']]
+        X = X.copy() # éviter de modifier le jeu de données en cache de streamlit
+        X.loc[:,parametres] = input_val
+        y_pred, anomalie_pred = fct.autoencodeur_predict(autoencodeur, scaler_meta, scaler_param, X)
+        rows_autoenc[4].markdown('**Prédiction**')
+        for i, param in enumerate(parametres):
+            rows_autoenc[4].text('{:0.1f}'.format(y_pred[i]))
+            rows_autoenc[4].text('') # pour aligner avec les inputs
+        rows_autoenc[5].markdown('**Détection**')
+        for i, param in enumerate(parametres):
+            if anomalie_pred[i] > 0:
+                rows_autoenc[5].markdown('**Anomalie**')
+            else:
+                rows_autoenc[5].text('ok')
+            rows_autoenc[5].text('') # pour aligner avec les inputs
+            
+        # modif de valeur
+        # prédiction
 # Conclusion
 elif page == pages[8] :
     st.write("### Conclusion")

@@ -1,6 +1,9 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model 
+from sklearn.preprocessing import MinMaxScaler
+import joblib
 import visualkeras
 
 DONNEES = "data/processed/meteo_pivot_cleaned_2010-2024_0.1.csv" 
@@ -101,6 +104,53 @@ visualkeras.layered_view(model,
                          legend = True,
                          draw_volume = False,
                          scale_xy= 2)
+
+# préparation du fichier de résultat
+resultats_if = pd.read_csv('data/testModelResults/isolationForest_ETP-GLOT-RR-TN-TX_False_anomaly_results.csv', parse_dates=['datemesure'])
+resultats_if = resultats_if.rename(columns = {'anomaly_pred': 'anomaly_if'})
+resultats_dbs = pd.read_csv('data/testModelResults/dbscan_ETP-GLOT-RR-TN-TX_True_anomaly_results.csv', parse_dates=['datemesure'])
+resultats_dbs = resultats_dbs.rename(columns = {'anomaly_pred': 'anomaly_dbs'})
+# uniquement l'année 2024 qui n'est pas utilisée pour entrainer l'autoencodeur
+resultats_dbs = resultats_dbs[resultats_dbs.datemesure.dt.year.isin([2024])]
+resultats = resultats_dbs.merge(resultats_if[['codearvalis', 'datemesure', 'anomaly_if']], how = 'left', left_on=['codearvalis', 'datemesure'], right_on = ['codearvalis', 'datemesure'])
+resultats.loc[resultats.anomaly > 0, "anomaly"] = 1
+
+# prédiction autoencodeur
+scaler_param = joblib.load('models/joblib_scaler_param_ETP-GLOT-TN-TX_2010-2022-0.1.gz')
+threshold = [0.00493416, 0.00489685, 0.00538372, 0.00484346]
+scaler_meta = joblib.load('models/joblib_scaler_meta.gz')
+meta_features = ['Altitude', 'Lambert93x', 'Lambert93y', 'day_sin', 'day_cos']
+meta_features_scaled = pd.DataFrame(scaler_meta.transform(resultats[meta_features]), columns = meta_features)
+data = pd.DataFrame(scaler_param.transform(resultats[[f"{param}_origine" for param in ['ETP', 'GLOT', 'TN', 'TX']]].values), columns = ['ETP', 'GLOT', 'TN', 'TX'])
+meta_features_scaled = pd.concat([data, meta_features_scaled], ignore_index = True, axis = 1)
+y_pred_autoenc = model.predict(meta_features_scaled.values)
+resultats[[f"{param}_pred_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]] = y_pred_autoenc
+resultats[[f"{param}_pred_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]] = scaler_param.inverse_transform(resultats[[f"{param}_pred_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]])
+resultats[[f"{param}_anomaly_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]] = np.where(np.abs(data - y_pred_autoenc) > threshold, 1, 0)
+resultats['anomaly_autoenc'] = np.where(resultats[[f"{param}_anomaly_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]].sum(axis = 1) > 0, 1, 0)
+
+resultats['anomaly_nbmodele'] = resultats[['anomaly_dbs', 'anomaly_if', 'anomaly_autoenc']].sum(axis = 1)
+resultats.to_csv('reports/streamlit-data/anomalies2025.csv', index = False, sep = ';')
+
+###suivi d'une station météo
+station4501 = df[(df.datemesure.dt.year == 2024) & (df.codearvalis == 4501)]
+meta_features_scaled = pd.DataFrame(scaler_meta.transform(station4501[meta_features]), columns = meta_features)
+data = pd.DataFrame(scaler_param.transform(station4501[[f"{param}_origine" for param in ['ETP', 'GLOT', 'TN', 'TX']]].values), columns = ['ETP', 'GLOT', 'TN', 'TX'])
+meta_features_scaled = pd.concat([data, meta_features_scaled], ignore_index = True, axis = 1)
+y_pred_autoenc = model.predict(meta_features_scaled.values)
+station4501[[f"{param}_pred_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]] = scaler_param.inverse_transform(y_pred_autoenc)
+station4501[[f"{param}_anomaly_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]] = np.where(np.abs(data - y_pred_autoenc) > threshold, 1, 0)
+station4501['anomaly_autoenc'] = np.where(station4501[[f"{param}_anomaly_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]].sum(axis = 1) > 0, 1, 0)
+# on retire des anomalies prédite les différences inférieures au seuil d'anomalie
+diff = np.abs(station4501.loc[station4501.anomaly_autoenc ==1, [f"{param}_pred_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]].values -
+              station4501.loc[station4501.anomaly_autoenc ==1, [f"{param}_origine" for param in ['ETP', 'GLOT', 'TN', 'TX']]].values)
+seuil_anomalie = [0.18, 83, 0.6, 0.8]
+seuil_anomalie = [seuil / 2 for seuil in seuil_anomalie ]
+diff_sup_seuil = np.where(diff > seuil_anomalie, 1, 0)
+station4501.loc[station4501.anomaly_autoenc ==1, [f"{param}_anomaly_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]] = diff_sup_seuil
+station4501['anomaly_autoenc'] = np.where(station4501[[f"{param}_anomaly_autoenc" for param in ['ETP', 'GLOT', 'TN', 'TX']]].sum(axis = 1) > 0, 1, 0)
+
+station4501.to_csv('reports/streamlit-data/station4501.csv', index = False, sep = ';')
 
 """
 from imblearn.under_sampling import RandomUnderSampler
