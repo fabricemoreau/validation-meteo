@@ -10,7 +10,7 @@ from PIL import Image
 from tensorflow.keras.models import load_model 
 import joblib
 
-import fct_context as fct
+import fct_streamlit as fct
 
 @st.cache_resource
 def load_logomf():
@@ -81,6 +81,7 @@ st.title("Projet détection d'anomalie sur des données météo")
 st.sidebar.title("Sommaire")
 pages = ["Accueil", "Contexte", "Le jeu de données", "Visualisation", "Préparation des données", "Modèles clustering", "Modèle autoencodeur", "Exemples", "Conclusion"]
 page = st.sidebar.radio("Aller vers", pages)
+bonus = st.sidebar.checkbox("Afficher informations bonus", value = False)
 
 # objectif: le moins de texte possible
 
@@ -123,9 +124,10 @@ elif page == pages[2] :
     if st.checkbox("des séries temporelles non synchrones", value = True):
         st.image('./reports/figures/series_stations_meteo.png', caption = 'ensemble des séries temporelles')
     
-    if st.checkbox("densité du réseau", value = True):
-        fig = fct.plot_distances(stations[[f"distance_station{i}" for i in range(1, 6)]])
-        st.plotly_chart(fig)
+    if bonus:
+        if st.checkbox("densité du réseau", value = True):
+            fig = fct.plot_distances(stations[[f"distance_station{i}" for i in range(1, 6)]])
+            st.plotly_chart(fig)
     
 # Visualisation
 elif page == pages[3] :
@@ -144,11 +146,12 @@ elif page == pages[3] :
     if st.checkbox("Répartition des valeurs des anomalies", value = True):
         st.image(f"./reports/figures/{param}_time.png", caption = f"Répartition du paramètre météo {param}")
     
-    if st.checkbox("Fréquence des anomalies", value = True):
-        st.write("Des anomalies sont présentes sur **2%** des données")
-        st.image("./reports/figures/Corrections per year.png", caption = "Répartition des corrections, cumul par an")
-        st.image("./reports/figures/Corrections per month.png", caption = "Répartition des corrections, cumul par mois")
-        # corrections temporelle (année, mois), répartition des corrections, corrections dans le jeu de données
+    if bonus:
+        if st.checkbox("Fréquence des anomalies", value = True):
+            st.write("Des anomalies sont présentes sur **2%** des données")
+            st.image("./reports/figures/Corrections per year.png", caption = "Répartition des corrections, cumul par an")
+            st.image("./reports/figures/Corrections per month.png", caption = "Répartition des corrections, cumul par mois")
+            # corrections temporelle (année, mois), répartition des corrections, corrections dans le jeu de données
     if st.checkbox("Répartition des corrections", value = True):
         st.image(f"./reports/figures/{param}_corrections.png", caption = f"Corrections du paramètre météo {param}")
 # Préparation des données
